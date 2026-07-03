@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint mérőszám dashboard</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; font-size: 13px; color: #1a1a18; background: #f5f5f2; margin: 0; padding: 0; }
+.app { max-width: 820px; margin: 0 auto; padding: 16px; }
+.card { background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.card-gradient { background: linear-gradient(135deg, #fafaf8, #f3f3ef); }
+label { display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px; color: #555; }
+input, select { width: 100%; padding: 6px 10px; border-radius: 7px; border: 1px solid #d0d0cb; font-size: 13px; font-family: inherit; }
+.btn { padding: 8px 20px; border-radius: 8px; border: none; background: #1a1a18; color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+.btn-sm { padding: 4px 12px; border-radius: 6px; border: 1px solid #d0d0cb; background: #fff; cursor: pointer; font-size: 12px; font-family: inherit; }
+.btn-accent { padding: 6px 14px; border-radius: 7px; border: none; background: #059669; color: #fff; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
+.btn:hover { background: #333; }
+.btn-sm:hover { background: #f5f5f2; }
+.btn-accent:hover { background: #047857; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 160px; }
+.section-title { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; margin-top: 16px; border-bottom: 1px solid #f0f0ec; padding-bottom: 4px; }
+.sub-title { font-size: 11px; font-weight: 600; color: #999; margin-bottom: 6px; margin-top: 10px; }
+.rag-green { background: #d1fae5; color: #065f46; border-radius: 6px; padding: 2px 10px; font-weight: 600; font-size: 13px; }
+.rag-amber { background: #fef3c7; color: #92400e; border-radius: 6px; padding: 2px 10px; font-weight: 600; font-size: 13px; }
+.rag-red   { background: #fee2e2; color: #991b1b; border-radius: 6px; padding: 2px 10px; font-weight: 600; font-size: 13px; }
+.ko-badge  { background: #1a1a18; color: #fff; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+.warn-badge { background: #fee2e2; color: #991b1b; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; display: inline-block; }
+.bonus-badge { background: #d1fae5; color: #065f46; border-radius: 6px; padding: 2px 10px; font-weight: 600; font-size: 12px; }
+.pillar-bar { height: 6px; border-radius: 3px; margin-top: 3px; }
+.tab-btn { padding: 6px 15px; border-radius: 8px; border: 0.5px solid rgba(0,0,0,.3); background: #fff; color: #73726c; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+.tab-btn.active { background: #1a1a18; color: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; padding: 4px 6px; color: #888; font-weight: 500; white-space: nowrap; border-bottom: 1px solid #eee; }
+td { padding: 4px 6px; border-bottom: 1px solid #f3f3ef; vertical-align: middle; }
+.hint { font-size: 11px; color: #999; margin-top: 2px; }
+.hint-ko { font-size: 11px; color: #dc2626; margin-top: 2px; font-weight: 500; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.subtitle { font-size: 12px; color: #73726c; margin-top: 3px; }
+.score-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.score-cell { background: #f9f9f7; border-radius: 8px; padding: 8px 10px; }
+.score-cell.ko-cell { background: #fef2f2; border: 1px solid #fecaca; }
+.score-label { font-size: 11px; color: #666; margin-bottom: 2px; }
+.score-val { font-weight: 700; font-size: 16px; }
+.score-sub { font-size: 11px; color: #999; }
+.fr-info { font-size: 12px; margin-bottom: 10px; background: #f9f9f7; border-radius: 6px; padding: 6px 10px; }
+.uv-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px; margin-top: 14px; }
+.uv-card .section-title { color: #15803d; border-bottom-color: #bbf7d0; }
+.progress-bar-wrap { background: #e5e5e0; border-radius: 6px; height: 10px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 6px; transition: width .4s; }
+.chart-wrap { position: relative; height: 220px; }
+.ratio-display { font-size: 11px; margin-top: 3px; }
+.ratio-ok { color: #059669; }
+.ratio-bad { color: #dc2626; font-weight: 600; }
+.sync-bar { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #888; margin-bottom: 10px; flex-wrap: wrap; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.sync-ok { background: #10b981; }
+.sync-err { background: #ef4444; }
+.sync-loading { background: #f59e0b; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.loading-overlay { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e5e0; border-top-color: #1a1a18; border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Quarter selector */
+.qtr-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; background: #fff; border: 1px solid #e5e5e0; border-radius: 10px; padding: 10px 14px; }
+.qtr-label { font-size: 11px; color: #888; font-weight: 500; white-space: nowrap; }
+.qtr-btn { padding: 4px 14px; border-radius: 6px; border: 1px solid #d0d0cb; background: #f9f9f7; cursor: pointer; font-size: 12px; font-family: inherit; white-space: nowrap; }
+.qtr-btn.active { background: #1a1a18; color: #fff; border-color: #1a1a18; font-weight: 600; }
+.qtr-btn:hover:not(.active) { background: #f0f0ec; }
+.qtr-new-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.qtr-new-form input { width: 160px; flex: none; }
+.past-badge { font-size: 10px; background: #f3f3ef; color: #888; border-radius: 4px; padding: 1px 6px; margin-left: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div style="margin-bottom:14px">
+    <h1>Sprint mérőszám dashboard</h1>
+    <div class="subtitle">Zafír &amp; Holdkő · 7 sprint/negyedév · Elvárás: 595/700 pont · Pénzes 30% · Termelés 20% · Elszám. 10% · Munkamin. 15% · Tervezés 10% · Feladatrend. 15%</div>
+  </div>
+  <div id="syncBar" class="sync-bar">
+    <span class="sync-dot sync-loading"></span>
+    <span id="syncStatus">Betöltés Confluenceból...</span>
+  </div>
+  <!-- Quarter selector -->
+  <div class="qtr-bar" id="qtrBar">
+    <span class="qtr-label">Negyedév:</span>
+    <div id="qtrBtns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+    <div id="qtrNewArea" style="margin-left:auto"></div>
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="tabBar"></div>
+  <div id="tabContent"><div class="loading-overlay"><span class="spinner"></span>Adatok betöltése...</div></div>
+</div>
+<script>
+// ─── Global error trap ───────────────────────────────────────────────────────
+window.onerror = function(msg, src, line, col, err) {
+  const el = document.getElementById('tabContent') || document.body;
+  el.innerHTML = '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:20px;color:#991b1b;font-size:13px"><strong>JavaScript hiba</strong><br>' + msg + '<br>Sor: ' + line + '<br>' + (err && err.stack ? '<pre style="font-size:11px;white-space:pre-wrap">' + err.stack + '</pre>' : '') + '</div>';
+};
+
+// ─── Confluence config ────────────────────────────────────────────────────────
+const CLOUD_ID  = '30196d32-a694-4ae2-81c3-b932085784e5';
+const PAGE_ID   = '1134821396';
+const CONF_BASE = 'https://direktor-szoftver.atlassian.net';
+const MCP_GET   = 'mcp__a82fea18-4959-4e30-951f-083024b71129__getConfluencePage';
+const MCP_PUT   = 'mcp__a82fea18-4959-4e30-951f-083024b71129__updateConfluencePage';
+const LS_KEY    = 'sprint_dashboard_v7';
+const LS_AUTH_KEY = 'sprint_dashboard_auth';
+
+function getConfAuth() {
+  try {
+    const a = JSON.parse(localStorage.getItem(LS_AUTH_KEY) || '{}');
+    if (a.email && a.token) return btoa(a.email + ':' + a.token);
+  } catch {}
+  return null;
+}
+
+function showAuthModal(onSuccess) {
+  let existing = {};
+  try { existing = JSON.parse(localStorage.getItem(LS_AUTH_KEY) || '{}'); } catch {}
+  const overlay = document.createElement('div');
+  overlay.id = 'authOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;max-width:400px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px">Confluence bejelentkezés</div>
+      <div style="font-size:12px;color:#777;margin-bottom:18px">Az adatok tárolásához szükséges az Atlassian azonosítód. A token csak a böngésződben tárolódik – a fájlban nincs benne.</div>
+      <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:4px">E-mail</label>
+      <input id="authEmail" type="email" placeholder="nev@direktor.hu" value="${existing.email||''}" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #d0d0cb;font-size:13px;margin-bottom:12px">
+      <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:4px">Atlassian API token</label>
+      <input id="authToken" type="password" placeholder="ATATT3x..." value="${existing.token||''}" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #d0d0cb;font-size:13px;margin-bottom:6px">
+      <div style="font-size:11px;color:#999;margin-bottom:18px">Token létrehozása: <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color:#059669">id.atlassian.com</a></div>
+      <div id="authError" style="font-size:12px;color:#dc2626;margin-bottom:10px;display:none"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="document.getElementById('authOverlay').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid #d0d0cb;background:#fff;cursor:pointer;font-size:13px">Mégsem</button>
+        <button id="authSaveBtn" onclick="saveAuth()" style="padding:8px 20px;border-radius:8px;border:none;background:#1a1a18;color:#fff;cursor:pointer;font-size:13px;font-weight:500">Mentés és betöltés</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  window._authOnSuccess = onSuccess;
+  setTimeout(() => { const e = document.getElementById('authEmail'); if (e && !e.value) e.focus(); else { const t = document.getElementById('authToken'); if (t) t.focus(); } }, 50);
+}
+
+function saveAuth() {
+  const email = (document.getElementById('authEmail')?.value || '').trim();
+  const token = (document.getElementById('authToken')?.value || '').trim();
+  const errEl = document.getElementById('authError');
+  if (!email || !token) { errEl.textContent = 'Add meg az e-mail címet és a tokent.'; errEl.style.display='block'; return; }
+  try { localStorage.setItem(LS_AUTH_KEY, JSON.stringify({email, token})); } catch {}
+  document.getElementById('authOverlay')?.remove();
+  if (typeof window._authOnSuccess === 'function') window._authOnSuccess();
+}
+
+function ensureAuth(then) {
+  if (getConfAuth()) { then(); return; }
+  showAuthModal(then);
+}
+
+// ─── Konstansok ───────────────────────────────────────────────────────────────
+const TOTAL_SPRINTS = 7;
+const TARGET_POINTS = 595;
+const MAX_POINTS    = 700;
+const PENZES_CEL    = 30;
+const TERMELES_CEL  = 60;
+const WEIGHTS = { penzes:30, termeles:20, elszamolas:10, munkaminoseg:15, tervezes:10, feladatrendezettsg:15 };
+const TEAM_CONFIG = {
+  holdko: { label:'Holdkő', color:'#7F77DD' },
+  zafir:  { label:'Zafír',  color:'#EF9F27' },
+};
+
+// Előre definiált negyedévek sorrendje
+const QUARTER_ORDER = ['tavasz','nyar','osz','tel'];
+const QUARTER_LABELS = { tavasz:'tavasz', nyar:'nyár', osz:'ősz', tel:'tél' };
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let activeTab = 'holdko';
+let compareChartInstance = null;
+
+// Negyedév-kezelés
+// quartersData: { "2026-nyar": { label:"2026 nyár", hk:[], zf:[] }, ... }
+// activeQuarterKey: "2026-nyar"
+let quartersData = {};
+let activeQuarterKey = '';
+let newQtrMode = false;
+
+function getActiveQtr() { return quartersData[activeQuarterKey] || { label:'–', hk:[], zf:[] }; }
+function getHk() { return getActiveQtr().hk || []; }
+function getZf() { return getActiveQtr().zf || []; }
+
+// ─── Confluence I/O ───────────────────────────────────────────────────────────
+async function loadFromConfluence() {
+  setSyncState('loading', 'Betöltés...');
+  try {
+    let bodyText = '';
+    if (window.cowork) {
+      const r = await window.cowork.callMcpTool(MCP_GET, { cloudId:CLOUD_ID, pageId:PAGE_ID, contentFormat:'markdown' });
+      if (r.isError) throw new Error('MCP hiba');
+      const raw = r.structuredContent ?? JSON.parse(r.content[0].text);
+      bodyText = extractBodyText(raw);
+    } else {
+      const auth = getConfAuth();
+      if (!auth) { ensureAuth(() => loadFromConfluence()); return; }
+      const resp = await fetch(`${CONF_BASE}/wiki/rest/api/content/${PAGE_ID}?expand=body.storage`, {
+        headers: { 'Authorization': 'Basic ' + auth, 'Accept': 'application/json' }
+      });
+      if (resp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => loadFromConfluence()); return; }
+      if (!resp.ok) throw new Error('Confluence API hiba: ' + resp.status);
+      const jdata = await resp.json();
+      bodyText = jdata.body?.storage?.value || '';
+    }
+    const data = extractJson(bodyText);
+    applyData(data);
+    try { localStorage.setItem(LS_KEY, JSON.stringify({quartersData, activeQuarterKey})); } catch{}
+    setSyncState('ok', 'Frissítve: ' + new Date().toLocaleTimeString('hu-HU'));
+  } catch(e) {
+    console.warn('Confluence betöltés sikertelen:', e);
+    try { const v=localStorage.getItem(LS_KEY); if(v){const p=JSON.parse(v);quartersData=p.quartersData||{};activeQuarterKey=p.activeQuarterKey||'';} } catch{}
+    if (!Object.keys(quartersData).length) initDefaultQuarter();
+    setSyncState('error', e.message || 'Confluence nem elérhető – helyi adatok betöltve');
+  }
+}
+
+async function saveToConfluence() {
+  setSyncState('saving', 'Mentés Confluenceba...');
+  try {
+    const payload = { quartersData, activeQuarterKey };
+    const json = JSON.stringify(payload);
+    const storageBody = '<p>Ez az oldal a Cowork sprint dashboard adatait tárolja. Automatikusan frissül – kézzel ne módosítsd!</p><pre><code class="language-json">' + escHtml(json) + '</code></pre>';
+    if (window.cowork) {
+      const r = await window.cowork.callMcpTool(MCP_PUT, { cloudId:CLOUD_ID, pageId:PAGE_ID, contentFormat:'html', body:storageBody });
+      if (r.isError) throw new Error('MCP hiba');
+    } else {
+      const auth = getConfAuth();
+      if (!auth) { ensureAuth(() => saveToConfluence()); return; }
+      const vResp = await fetch(`${CONF_BASE}/wiki/rest/api/content/${PAGE_ID}`, {
+        headers: { 'Authorization': 'Basic ' + auth, 'Accept': 'application/json' }
+      });
+      if (vResp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => saveToConfluence()); return; }
+      if (!vResp.ok) throw new Error('Verzió lekérés sikertelen');
+      const vData = await vResp.json();
+      const nextVer = (vData.version?.number || 0) + 1;
+      const putResp = await fetch(`${CONF_BASE}/wiki/rest/api/content/${PAGE_ID}`, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          version: { number: nextVer },
+          title: 'Sprint mérőszámok – adatok [NE SZERKESZD KÉZZEL]',
+          type: 'page',
+          body: { storage: { value: storageBody, representation: 'storage' } }
+        })
+      });
+      if (!putResp.ok) throw new Error('Mentés sikertelen: ' + putResp.status);
+    }
+    try { localStorage.setItem(LS_KEY, JSON.stringify({quartersData, activeQuarterKey})); } catch{}
+    setSyncState('ok', 'Mentve: ' + new Date().toLocaleTimeString('hu-HU'));
+  } catch(e) {
+    setSyncState('error', 'Confluence mentés sikertelen – csak helyi tárolás');
+  }
+}
+
+function applyData(data) {
+  if (!data) { initDefaultQuarter(); return; }
+  // Új formátum: quartersData + activeQuarterKey
+  if (data.quartersData) {
+    quartersData = data.quartersData;
+    activeQuarterKey = data.activeQuarterKey || Object.keys(data.quartersData)[0] || '';
+    if (!Object.keys(quartersData).length) initDefaultQuarter();
+    return;
+  }
+  // Migráció régi formátumból (hk/zf top-level)
+  if (data.hk || data.zf) {
+    const key = '2026-nyar';
+    quartersData = { [key]: { label: '2026 nyár', hk: data.hk||[], zf: data.zf||[] } };
+    activeQuarterKey = key;
+    return;
+  }
+  initDefaultQuarter();
+}
+
+function initDefaultQuarter() {
+  const key = '2026-nyar';
+  quartersData = { [key]: { label: '2026 nyár', hk: [], zf: [] } };
+  activeQuarterKey = key;
+}
+
+function sortedQuarterKeys() {
+  // Sorrend: év növekvő, azon belül tavasz→nyár→ősz→tél
+  return Object.keys(quartersData).sort((a,b) => {
+    const [ayStr, as] = a.split('-'); const [byStr, bs] = b.split('-');
+    const ay=parseInt(ayStr)||0, by=parseInt(byStr)||0;
+    if (ay!==by) return ay-by;
+    return (QUARTER_ORDER.indexOf(as)||99) - (QUARTER_ORDER.indexOf(bs)||99);
+  });
+}
+
+function makeQuarterKey(year, season) { return `${year}-${season}`; }
+
+function makeQuarterLabel(year, season) {
+  return `${year} ${QUARTER_LABELS[season]||season}`;
+}
+
+function nextQuarterSuggestion() {
+  const keys = sortedQuarterKeys();
+  if (!keys.length) return { year: new Date().getFullYear(), season: 'nyar' };
+  const last = keys[keys.length-1];
+  const [yStr, s] = last.split('-');
+  const y = parseInt(yStr)||new Date().getFullYear();
+  const idx = QUARTER_ORDER.indexOf(s);
+  if (idx === -1 || idx === QUARTER_ORDER.length-1) return { year: y+1, season: QUARTER_ORDER[0] };
+  return { year: y, season: QUARTER_ORDER[idx+1] };
+}
+
+function extractBodyText(raw) {
+  if (!raw) return '';
+  if (typeof raw.body === 'string') return raw.body;
+  if (raw.body && typeof raw.body === 'object') return JSON.stringify(raw.body);
+  return JSON.stringify(raw);
+}
+
+function extractJson(text) {
+  const codeMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (codeMatch) { try { return JSON.parse(codeMatch[1].trim()); } catch{} }
+  const idx = text.indexOf('"quartersData"');
+  const idx2 = text.indexOf('"hk"');
+  const startIdx = idx > -1 ? idx : idx2;
+  if (startIdx > -1) {
+    const start = text.lastIndexOf('{', startIdx);
+    if (start > -1) {
+      let depth=0, end=-1;
+      for (let i=start; i<text.length; i++) {
+        if (text[i]==='{') depth++;
+        else if (text[i]==='}') { depth--; if (depth===0){end=i;break;} }
+      }
+      if (end>-1) { try { return JSON.parse(text.slice(start,end+1)); } catch{} }
+    }
+  }
+  return null;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function setSyncState(state, msg) {
+  const dot = document.querySelector('.sync-dot');
+  const status = document.getElementById('syncStatus');
+  if (!dot || !status) return;
+  dot.className = 'sync-dot ' + (state==='ok'?'sync-ok':state==='error'?'sync-err':'sync-loading');
+  status.textContent = msg;
+}
+
+// ─── Score számítás ───────────────────────────────────────────────────────────
+function calcScore(d) {
+  let scores = {}, ko = {};
+
+  // 1. Pénzes arány (30%)
+  const penzesAny = parseFloat(d.penzesAny)||0;
+  const penzesTerv = parseFloat(d.penzesTerv)||PENZES_CEL;
+  scores.penzes = Math.min(100, Math.round((penzesTerv>0 ? penzesAny/penzesTerv : 0)*100));
+
+  // 2. Termelés/támogatás (20%)
+  const termAny = parseFloat(d.termelesTamAny)||0;
+  const termTerv = parseFloat(d.termelesTamTerv)||TERMELES_CEL;
+  const autoPiros = termAny < 60;
+  scores.termeles = Math.min(100, Math.round((termTerv>0 ? termAny/termTerv : 0)*100));
+
+  // 3. Elszámolási fegyelem (10%)
+  const kesDb    = parseInt(d.kesedelmasElszamolasDb)||0;
+  const szamlaDb = parseInt(d.szamlaKesedelemDb)||0;
+  let elszScore = 100;
+  ko.elszamolas = kesDb >= 2 || szamlaDb >= 2;
+  if (ko.elszamolas) { elszScore = 0; } else {
+    if (kesDb === 1)    elszScore -= 50;
+    if (szamlaDb === 1) elszScore -= 50;
+  }
+  scores.elszamolas = Math.max(0, elszScore);
+
+  // 4. Munkaminőség (15%)
+  const bevDb80  = parseInt(d.bevDb80)||0;
+  const bevDb60  = parseInt(d.bevDb60)||0;
+  const suppDb80 = parseInt(d.suppDb80)||0;
+  let mkScore = 100;
+  ko.munkaminoseg = bevDb60 >= 1 || bevDb80 >= 3;
+  if (ko.munkaminoseg) { mkScore = 0; } else if (bevDb80 >= 1) { mkScore -= 50; }
+  if (!ko.munkaminoseg) {
+    if (suppDb80 >= 3) { mkScore = 0; ko.munkaminoseg = true; }
+    else if (suppDb80 >= 1) { mkScore = Math.max(0, mkScore - 50); }
+  }
+  scores.munkaminoseg = mkScore;
+
+  // 5. Tervezési pontosság (10%)
+  const kiemelt         = d.kiemeltElNemKeszult === 'igen';
+  const tervezettOssz   = parseFloat(d.tervezettOsszesen)||0;
+  const kikerultOra     = parseFloat(d.kikerultOra)||0;
+  const elNemKeszultOra = parseFloat(d.elNemKeszultOra)||0;
+  let tervScore = 100;
+  let kikerultRatio = 0, elNemRatio = 0;
+  ko.tervezes = kiemelt;
+  if (ko.tervezes) { tervScore = 0; } else if (tervezettOssz > 0) {
+    kikerultRatio = kikerultOra / tervezettOssz;
+    elNemRatio    = elNemKeszultOra / tervezettOssz;
+    if (kikerultRatio > 0.10) tervScore -= 50;
+    if (elNemRatio    > 0.10) tervScore -= 50;
+    tervScore = Math.max(0, tervScore);
+  }
+  scores.tervezes = tervScore;
+
+  // 6. Feladatrendezettség (15%)
+  let hp = 0;
+  hp += parseInt(d.lejaFeldolg)||0;
+  if ((parseInt(d.lejaFelug)||0) > 25)    hp += 1;
+  if (d.lejaMegoldasi === 'igen')          hp += 2;
+  if ((parseInt(d.lejaMegkezdett)||0) > 25) hp += 1;
+  if ((parseInt(d.lejaBetery)||0) > 3)    hp += 1;
+  hp += parseInt(d.projKeres)||0;
+  if (d.problemaSurgeto === 'igen')        hp += 2;
+  if ((parseFloat(d.naptarKocka)||0) < 90 && d.naptarKocka !== '' && d.naptarKocka !== undefined) hp += 1;
+
+  ko.feladatrendezettsg = hp >= 4;
+  scores.feladatrendezettsg = hp === 0 ? 100 : hp <= 3 ? 50 : 0;
+
+  // Összesített
+  const rawTotal = Math.round(
+    Math.min(100,scores.penzes)             * WEIGHTS.penzes/100 +
+    Math.min(100,scores.termeles)           * WEIGHTS.termeles/100 +
+    Math.min(100,scores.elszamolas)         * WEIGHTS.elszamolas/100 +
+    Math.min(100,scores.munkaminoseg)       * WEIGHTS.munkaminoseg/100 +
+    Math.min(100,scores.tervezes)           * WEIGHTS.tervezes/100 +
+    Math.min(100,scores.feladatrendezettsg) * WEIGHTS.feladatrendezettsg/100
+  );
+
+  const uvKorrekcioPct = parseFloat(d.uvKorrekcioPct)||0;
+  const total = Math.min(100, Math.max(0, rawTotal + uvKorrekcioPct));
+  const rag = autoPiros ? 'red' : total>=85 ? 'green' : total>=70 ? 'amber' : 'red';
+
+  return { scores, total, rawTotal, uvKorrekcioPct, rag, autoPiros, hibapontok:hp,
+           ko, kikerultRatio, elNemRatio, uvKivel:d.uvKivel, uvMegjegyzes:d.uvMegjegyzes };
+}
+
+// ─── Live pillar status (for section title coloring) ─────────────────────────
+function livePillarStatus(f) {
+  const s = {};
+
+  // Pénzes – arányos, nincs KO
+  const pAny = parseFloat(f.penzesAny), pTerv = parseFloat(f.penzesTerv)||30;
+  if (f.penzesAny === '' || f.penzesAny === undefined || isNaN(pAny)) { s.penzes = 'neutral'; }
+  else { const r = pTerv>0 ? pAny/pTerv*100 : 0; s.penzes = r>=85?'green':r>=70?'amber':'red'; }
+
+  // Termelés – <60% auto piros, arányos
+  const tAny = parseFloat(f.termelesTamAny);
+  if (f.termelesTamAny === '' || f.termelesTamAny === undefined || isNaN(tAny)) { s.termeles = 'neutral'; }
+  else { const tTerv=parseFloat(f.termelesTamTerv)||60; const r=tTerv>0?tAny/tTerv*100:0; s.termeles = tAny<60?'red':r>=85?'green':'amber'; }
+
+  // Elszámolás
+  const kesDb = parseInt(f.kesedelmasElszamolasDb)||0, szDb = parseInt(f.szamlaKesedelemDb)||0;
+  s.elszamolas = (kesDb>=2||szDb>=2) ? 'red' : (kesDb>=1||szDb>=1) ? 'amber' : 'green';
+
+  // Munkaminőség
+  const bev80 = parseInt(f.bevDb80)||0, bev60 = parseInt(f.bevDb60)||0, supp = parseInt(f.suppDb80)||0;
+  s.munkaminoseg = (bev60>=1||bev80>=3||supp>=3) ? 'red' : (bev80>=1||supp>=1) ? 'amber' : 'green';
+
+  // Tervezés
+  const kiemelt = f.kiemeltElNemKeszult === 'igen';
+  const tOssz = parseFloat(f.tervezettOsszesen)||0;
+  const kR = tOssz>0?(parseFloat(f.kikerultOra)||0)/tOssz:0;
+  const eR = tOssz>0?(parseFloat(f.elNemKeszultOra)||0)/tOssz:0;
+  s.tervezes = kiemelt ? 'red' : (kR>0.10||eR>0.10) ? 'amber' : 'green';
+
+  // Feladatrendezettség
+  let hp = 0;
+  hp += parseInt(f.lejaFeldolg)||0;
+  if ((parseInt(f.lejaFelug)||0)>25)     hp+=1;
+  if (f.lejaMegoldasi==='igen')           hp+=2;
+  if ((parseInt(f.lejaMegkezdett)||0)>25) hp+=1;
+  if ((parseInt(f.lejaBetery)||0)>3)     hp+=1;
+  hp += parseInt(f.projKeres)||0;
+  if (f.problemaSurgeto==='igen')         hp+=2;
+  if ((parseFloat(f.naptarKocka)||0)<90 && f.naptarKocka!==''&&f.naptarKocka!==undefined) hp+=1;
+  s.feladatrendezettsg = hp>=4 ? 'red' : hp>=1 ? 'amber' : 'green';
+
+  return s;
+}
+
+function sectionTitleHtml(text, st, extraInfo) {
+  const cfg = {
+    green:   { bg:'#f0fdf4', bl:'#10b981', tc:'#065f46', label:'✓ OK' },
+    amber:   { bg:'#fffbeb', bl:'#f59e0b', tc:'#92400e', label:'−50%' },
+    red:     { bg:'#fef2f2', bl:'#ef4444', tc:'#991b1b', label:'KO / 0%' },
+    neutral: { bg:'transparent', bl:'#e5e5e0', tc:'#666',  label:'' },
+  }[st] || { bg:'transparent', bl:'#e5e5e0', tc:'#666', label:'' };
+  const badge = cfg.label ? `<span style="font-size:11px;font-weight:700;color:${cfg.tc}">${cfg.label}${extraInfo?' · '+extraInfo:''}</span>` : '';
+  return `<div style="display:flex;justify-content:space-between;align-items:center;background:${cfg.bg};border-left:3px solid ${cfg.bl};padding:5px 10px;border-radius:6px;margin-top:16px;margin-bottom:8px">
+    <span style="font-size:12px;font-weight:600;color:${cfg.tc};text-transform:uppercase;letter-spacing:.5px">${text}</span>
+    ${badge}
+  </div>`;
+}
+
+function getLastGongyolt(history) {
+  if (!history.length) return { penzes:null, termeles:null };
+  const last = history[history.length-1];
+  const p=parseFloat(last.penzesGongyolt), t=parseFloat(last.termelesTamGongyolt);
+  return { penzes:isNaN(p)?null:p, termeles:isNaN(t)?null:t };
+}
+
+// ─── HTML helpers ─────────────────────────────────────────────────────────────
+function ragHtml(rag) {
+  if (rag==='green') return '<span class="rag-green">● Zöld</span>';
+  if (rag==='amber') return '<span class="rag-amber">● Sárga</span>';
+  return '<span class="rag-red">● Piros</span>';
+}
+function scoreColor(v) { return v>=80?'#059669':v>=60?'#d97706':'#dc2626'; }
+function selHtml(name,val) {
+  return `<select data-field="${name}"><option value="nem"${val==='nem'?' selected':''}>Nem</option><option value="igen"${val==='igen'?' selected':''}>Igen</option></select>`;
+}
+function numHtml(name,val,min) {
+  return `<input type="number" min="${min??0}" data-field="${name}" value="${val??0}">`;
+}
+function decHtml(name,val,min) {
+  return `<input type="number" min="${min??0}" step="0.01" data-field="${name}" value="${val??0}">`;
+}
+function txtHtml(name,val,ph) {
+  return `<input type="text" data-field="${name}" value="${escAttr(val||'')}" placeholder="${ph||''}">`;
+}
+function escAttr(s) { return String(s).replace(/"/g,'&quot;'); }
+function fld(lbl,inp,hint,hintClass) {
+  return `<div class="col"><label>${lbl}</label>${inp}${hint?`<div class="${hintClass||'hint'}">${hint}</div>`:''}</div>`;
+}
+
+// ─── Form defaults ────────────────────────────────────────────────────────────
+const emptyForm = {
+  sprintNev:'',
+  penzesTerv:'30', penzesAny:'', penzesGongyolt:'',
+  termelesTamTerv:'60', termelesTamAny:'', termelesTamGongyolt:'',
+  kesedelmasElszamolasDb:'0', szamlaKesedelemDb:'0',
+  bevDb80:'0', bevDb60:'0', suppDb80:'0',
+  kiemeltElNemKeszult:'nem',
+  tervezettOsszesen:'0', kikerultOra:'0', elNemKeszultOra:'0',
+  lejaFeldolg:'0', lejaFelug:'0', lejaMegoldasi:'nem',
+  lejaMegkezdett:'0', lejaBetery:'0', projKeres:'0', problemaSurgeto:'nem',
+  naptarKocka:'100',
+  uvLelkes:'nem', uvSzabaly:'nem', uvKivel:'', uvMegjegyzes:'', uvKorrekcioPct:'0',
+};
+
+let forms      = { holdko:{...emptyForm}, zafir:{...emptyForm} };
+let lastResults = { holdko:null, zafir:null };
+
+// ─── Quarter bar ──────────────────────────────────────────────────────────────
+function renderQtrBar() {
+  const keys = sortedQuarterKeys();
+  const btns = document.getElementById('qtrBtns');
+  const newArea = document.getElementById('qtrNewArea');
+
+  btns.innerHTML = keys.map(k => {
+    const q = quartersData[k];
+    const isActive = k === activeQuarterKey;
+    const isPast = !isActive && keys.indexOf(k) < keys.indexOf(activeQuarterKey);
+    return `<button class="qtr-btn${isActive?' active':''}" data-qtr="${k}">${q.label}${isPast?'<span class="past-badge">múlt</span>':''}</button>`;
+  }).join('');
+
+  if (newQtrMode) {
+    const sug = nextQuarterSuggestion();
+    newArea.innerHTML = `
+      <div class="qtr-new-form">
+        <span style="font-size:11px;color:#555;white-space:nowrap">Új negyedév:</span>
+        <input id="newQtrYear" type="number" value="${sug.year}" min="2020" max="2040" style="width:70px">
+        <select id="newQtrSeason" style="width:90px">
+          ${QUARTER_ORDER.map(s=>`<option value="${s}"${s===sug.season?' selected':''}>${QUARTER_LABELS[s]}</option>`).join('')}
+        </select>
+        <button class="btn-accent" id="btnCreateQtr">Létrehozás</button>
+        <button class="btn-sm" id="btnCancelQtr">✕</button>
+      </div>`;
+  } else {
+    newArea.innerHTML = `<button class="btn-sm" id="btnNewQtr">+ Új negyedév</button>`;
+  }
+
+  // Events
+  btns.onclick = e => {
+    const k = e.target.closest('[data-qtr]')?.dataset.qtr;
+    if (k && k !== activeQuarterKey) {
+      activeQuarterKey = k;
+      forms = { holdko:{...emptyForm}, zafir:{...emptyForm} };
+      lastResults = { holdko:null, zafir:null };
+      render();
+    }
+  };
+
+  const btnNew = document.getElementById('btnNewQtr');
+  if (btnNew) btnNew.onclick = () => { newQtrMode = true; renderQtrBar(); };
+
+  const btnCancel = document.getElementById('btnCancelQtr');
+  if (btnCancel) btnCancel.onclick = () => { newQtrMode = false; renderQtrBar(); };
+
+  const btnCreate = document.getElementById('btnCreateQtr');
+  if (btnCreate) btnCreate.onclick = () => {
+    const year = parseInt(document.getElementById('newQtrYear').value);
+    const season = document.getElementById('newQtrSeason').value;
+    if (!year || !season) return;
+    const key = makeQuarterKey(year, season);
+    if (quartersData[key]) { alert('Ez a negyedév már létezik.'); return; }
+    quartersData[key] = { label: makeQuarterLabel(year, season), hk: [], zf: [] };
+    activeQuarterKey = key;
+    newQtrMode = false;
+    forms = { holdko:{...emptyForm}, zafir:{...emptyForm} };
+    lastResults = { holdko:null, zafir:null };
+    saveToConfluence();
+    render();
+  };
+}
+
+// ─── TeamTab ──────────────────────────────────────────────────────────────────
+function renderTeamTab(team) {
+  const cfg = TEAM_CONFIG[team];
+  const history = team==='holdko' ? getHk() : getZf();
+  const f = forms[team], lr = lastResults[team];
+  const cumTotal = history.reduce((a,b)=>a+(b.total||0),0);
+  const sprintsDone = history.length;
+  const progressPct = Math.min(100,(cumTotal/TARGET_POINTS)*100);
+  const onTrack = sprintsDone>0 ? (cumTotal/sprintsDone)>=85 : true;
+  const g = getLastGongyolt(history);
+  const pw = g.penzes!==null && g.penzes<PENZES_CEL;
+  const tw = g.termeles!==null && g.termeles<TERMELES_CEL;
+  const tgt = (TARGET_POINTS/MAX_POINTS)*100;
+  const qtrLabel = getActiveQtr().label;
+  const isLastQuarter = activeQuarterKey === sortedQuarterKeys()[sortedQuarterKeys().length-1];
+
+  const tervOssz  = parseFloat(f.tervezettOsszesen)||0;
+  const kikerultR = tervOssz>0 ? (parseFloat(f.kikerultOra)||0)/tervOssz : 0;
+  const elNemR    = tervOssz>0 ? (parseFloat(f.elNemKeszultOra)||0)/tervOssz : 0;
+  const naptarVal = parseFloat(f.naptarKocka)||0;
+  const uvPct     = parseFloat(f.uvKorrekcioPct)||0;
+  const uvHasCondition = f.uvLelkes==='igen' || f.uvSzabaly==='igen';
+
+  let html = `
+  <div class="card card-gradient">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <span style="font-weight:600;font-size:15px;color:${cfg.color}">${cfg.label}</span>
+      <span style="font-size:12px;color:#888">${qtrLabel} · ${sprintsDone}/${TOTAL_SPRINTS} sprint · ${cumTotal}/${MAX_POINTS} pont</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${progressPct}%;background:${cfg.color}"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:#888">
+      <span>${cumTotal} pont</span>
+      <span style="color:${onTrack?'#059669':'#dc2626'};font-weight:600">${onTrack?'▲ Ütemben':'▼ Lemaradás'} · Cél: ${TARGET_POINTS}</span>
+    </div>
+    <div style="position:relative;height:18px;margin-top:2px">
+      <div style="position:absolute;left:${tgt}%;top:0;width:1px;height:12px;background:#dc2626"></div>
+      <div style="position:absolute;left:${tgt}%;top:13px;font-size:10px;color:#dc2626;transform:translateX(-50%)">595</div>
+    </div>
+    ${sprintsDone>0?`
+    <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+      <div style="font-size:12px"><span style="color:#888">Göngyölt pénzes tény: </span>
+        <span style="font-weight:600;color:${pw?'#dc2626':g.penzes!==null?'#059669':'#888'}">${g.penzes!==null?g.penzes+'%':'–'}</span>
+        ${pw?`<span class="warn-badge" style="margin-left:8px">⚠ Cél (${PENZES_CEL}%) alatt!</span>`:''}
+      </div>
+      <div style="font-size:12px"><span style="color:#888">Göngyölt termelés/tám. tény: </span>
+        <span style="font-weight:600;color:${tw?'#dc2626':g.termeles!==null?'#059669':'#888'}">${g.termeles!==null?g.termeles+'%':'–'}</span>
+        ${tw?`<span class="warn-badge" style="margin-left:8px">⚠ Cél (${TERMELES_CEL}%) alatt!</span>`:''}
+      </div>
+    </div>`:''}
+  </div>`;
+
+  // Ha múlt negyedév: csak history
+  if (!isLastQuarter && sortedQuarterKeys().indexOf(activeQuarterKey) < sortedQuarterKeys().length-1) {
+    html += `<div class="card" style="border:1px solid #fde68a;background:#fffbeb">
+      <span style="font-size:12px;color:#92400e">⏳ Lezárt negyedév – csak olvasható. Új sprint a legújabb negyedévben rögzíthető.</span>
+    </div>`;
+  } else {
+    html += renderFormHtml(f, tervOssz, kikerultR, elNemR, naptarVal, uvPct, uvHasCondition, team);
+  }
+
+  // Eredmény kártya
+  if (lr) {
+    const bc = lr.rag==='green'?'#10b981':lr.rag==='amber'?'#f59e0b':'#ef4444';
+    const pillars=[
+      ['💰 Pénzes',               lr.scores.penzes,                          WEIGHTS.penzes,           false],
+      ['⚙️ Termelés/tám.',        lr.scores.termeles,                        WEIGHTS.termeles,         false],
+      ['📋 Elszámolási fegyelem', lr.scores.elszamolas,                      WEIGHTS.elszamolas,       lr.ko.elszamolas],
+      ['🔍 Munkaminőség',         lr.scores.munkaminoseg,                    WEIGHTS.munkaminoseg,     lr.ko.munkaminoseg],
+      ['🎯 Tervezési pontosság',  lr.scores.tervezes,                        WEIGHTS.tervezes,         lr.ko.tervezes],
+      ['📌 Feladatrendezettség',  Math.min(100,lr.scores.feladatrendezettsg),WEIGHTS.feladatrendezettsg,lr.ko.feladatrendezettsg],
+    ];
+    html += `
+    <div class="card" style="border:2px solid ${bc};margin-top:4px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-weight:700;font-size:22px">${lr.total}<span style="font-size:14px;color:#888;font-weight:400"> pont</span></span>
+        ${ragHtml(lr.rag)}
+        ${lr.uvKorrekcioPct>0?`<span class="bonus-badge">+${lr.uvKorrekcioPct}% ügyvezetői</span>`:''}
+        ${lr.autoPiros?'<span class="warn-badge">⚠ Termelés/tám. &lt;60%</span>':''}
+      </div>
+      ${lr.uvKorrekcioPct>0?`
+      <div class="fr-info" style="background:#f0fdf4;border:1px solid #bbf7d0">
+        🔓 Ügyvezetői korrekció: <strong>+${lr.uvKorrekcioPct}%</strong>
+        (számított: ${lr.rawTotal} + ${lr.uvKorrekcioPct} = ${lr.total} pont)
+        ${lr.uvKivel?` · Egyeztetve: ${lr.uvKivel}`:''}
+        ${lr.uvMegjegyzes?` · ${lr.uvMegjegyzes}`:''}
+      </div>`:''}
+      ${lr.ko.elszamolas||lr.ko.munkaminoseg||lr.ko.tervezes||lr.ko.feladatrendezettsg?`
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${lr.ko.elszamolas?'<span class="ko-badge">KO: Elszámolás</span>':''}
+        ${lr.ko.munkaminoseg?'<span class="ko-badge">KO: Munkaminőség</span>':''}
+        ${lr.ko.tervezes?'<span class="ko-badge">KO: Tervezés</span>':''}
+        ${lr.ko.feladatrendezettsg?'<span class="ko-badge">KO: Feladatrendezettség</span>':''}
+      </div>`:''}
+      <div class="fr-info">
+        📌 Feladatrendezettség: <strong>${lr.hibapontok} hibapont</strong>
+        → ${lr.ko.feladatrendezettsg?'<span style="color:#dc2626">KO (≥4 hp)</span>':lr.hibapontok===0?'<span style="color:#059669">100 pont (0 hp)</span>':'<span style="color:#d97706">50 pont (1–3 hp)</span>'}
+      </div>
+      ${lr.kikerultRatio>0||lr.elNemRatio>0?`
+      <div class="fr-info">🎯 Tervezés: kikerült ${(lr.kikerultRatio*100).toFixed(1)}%${lr.kikerultRatio>0.10?' <span style="color:#dc2626">⚠ >10%</span>':''} · el nem készült ${(lr.elNemRatio*100).toFixed(1)}%${lr.elNemRatio>0.10?' <span style="color:#dc2626">⚠ >10%</span>':''}</div>`:''}
+      <div class="score-grid">
+        ${pillars.map(([l,sc,w,isKo])=>`
+        <div class="score-cell${isKo?' ko-cell':''}">
+          <div class="score-label">${l} (${w}%)</div>
+          <div class="score-val">${isKo?'<span class="ko-badge" style="font-size:13px">KO</span>':sc+'<span class="score-sub">/100</span>'}</div>
+          ${!isKo?`<div class="pillar-bar" style="width:${Math.min(100,sc)}%;background:${sc>=80?'#10b981':sc>=60?'#f59e0b':'#ef4444'}"></div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Sprint history
+  if (history.length > 0) {
+    html += `
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px">Sprint history – ${qtrLabel}</div>
+      <table>
+        <thead><tr>${['Sprint','Pont','Számított','Korr.','RAG','Pénzes','Termelés','Elszám.','Munka','Tervezés','Feladat'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${history.map(h=>{
+            const fr=Math.min(100,h.scores?.feladatrendezettsg||0);
+            const uv=h.uvKorrekcioPct||0;
+            return `<tr>
+              <td>${h.sprintNev}</td>
+              <td style="font-weight:600">${h.total}</td>
+              <td style="color:#888;font-size:11px">${h.rawTotal??h.total}</td>
+              <td>${uv>0?`<span class="bonus-badge">+${uv}%</span>`:''}</td>
+              <td>${ragHtml(h.rag)}</td>
+              ${[h.scores?.penzes,h.scores?.termeles].map(v=>`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
+              ${[
+                [h.scores?.elszamolas,h.ko?.elszamolas],
+                [h.scores?.munkaminoseg,h.ko?.munkaminoseg],
+                [h.scores?.tervezes,h.ko?.tervezes],
+                [fr,h.ko?.feladatrendezettsg]
+              ].map(([v,isKo])=>isKo?`<td><span class="ko-badge">KO</span></td>`:`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+  return html;
+}
+
+function renderFormHtml(f, tervOssz, kikerultR, elNemR, naptarVal, uvPct, uvHasCondition, team) {
+  const st = livePillarStatus(f);
+  // Feladatrendezettség hp count for badge info
+  let _hp=0;
+  _hp+=parseInt(f.lejaFeldolg)||0;
+  if((parseInt(f.lejaFelug)||0)>25)_hp+=1;
+  if(f.lejaMegoldasi==='igen')_hp+=2;
+  if((parseInt(f.lejaMegkezdett)||0)>25)_hp+=1;
+  if((parseInt(f.lejaBetery)||0)>3)_hp+=1;
+  _hp+=parseInt(f.projKeres)||0;
+  if(f.problemaSurgeto==='igen')_hp+=2;
+  if((parseFloat(f.naptarKocka)||0)<90&&f.naptarKocka!==''&&f.naptarKocka!==undefined)_hp+=1;
+  const frBadge = _hp>0 ? `${_hp} hp` : '';
+  return `
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:12px">Új sprint rögzítése</div>
+    <div class="row">${fld('Sprint neve / azonosítója', txtHtml('sprintNev',f.sprintNev,'pl. 2026/13'), '')}</div>
+
+    ${sectionTitleHtml('💰 Pénzes arány (30%)', st.penzes)}
+    <div class="row">
+      ${fld('Terv pénzes % (cél ≥30%)', decHtml('penzesTerv',f.penzesTerv), '')}
+      ${fld('Tény pénzes % (sprint)', decHtml('penzesAny',f.penzesAny), '')}
+      ${fld('Göngyölt pénzes tény %', decHtml('penzesGongyolt',f.penzesGongyolt), 'Cél: ≥30%')}
+    </div>
+
+    ${sectionTitleHtml('⚙️ Termelés/támogatás arány (20%)', st.termeles, st.termeles==='red'&&(parseFloat(f.termelesTamAny)||0)<60?'Auto piros':undefined)}
+    <div class="row">
+      ${fld('Terv % (cél ≥60%)', decHtml('termelesTamTerv',f.termelesTamTerv), '')}
+      ${fld('Tény % (sprint)', decHtml('termelesTamAny',f.termelesTamAny), '60% alatt: auto PIROS')}
+      ${fld('Göngyölt termelés/tám. tény %', decHtml('termelesTamGongyolt',f.termelesTamGongyolt), 'Cél: ≥60%')}
+    </div>
+
+    ${sectionTitleHtml('📋 Elszámolási fegyelem (10%)', st.elszamolas)}
+    <div style="font-size:11px;color:#888;background:#f9f9f7;border-radius:6px;padding:6px 10px;margin-bottom:8px">
+      1 db → −50% · 2 vagy több db → <strong>KO (0 pont)</strong>
+    </div>
+    <div class="row">
+      ${fld('Késedelmes elszámolás (db)', numHtml('kesedelmasElszamolasDb',f.kesedelmasElszamolasDb), '1 db: −50% | ≥2 db: KO', (parseInt(f.kesedelmasElszamolasDb)||0)>=2?'hint-ko':'hint')}
+      ${fld('Számla késedelmes számlázása (db)', numHtml('szamlaKesedelemDb',f.szamlaKesedelemDb), '1 db: −50% | ≥2 db: KO', (parseInt(f.szamlaKesedelemDb)||0)>=2?'hint-ko':'hint')}
+    </div>
+
+    ${sectionTitleHtml('🔍 Munkaminőség (15%)', st.munkaminoseg)}
+    <div style="font-size:11px;color:#888;background:#f9f9f7;border-radius:6px;padding:6px 10px;margin-bottom:8px">
+      Bevezetési: 1-2 db 80% alatt → −50% | ≥3 db 80% alatt vagy ≥1 db 60% alatt → <strong>KO</strong><br>
+      Support (80% alatt <em>és</em> sprintben &gt;2 óra ráfordítás): 1-2 db → −50% | ≥3 db → −100%
+    </div>
+    <div class="sub-title">Bevezetési projektek</div>
+    <div class="row">
+      ${fld('80% alatt (db)', numHtml('bevDb80',f.bevDb80), '≥3 db: KO', (parseInt(f.bevDb80)||0)>=3?'hint-ko':'hint')}
+      ${fld('Ebből 60% alatt (db)', numHtml('bevDb60',f.bevDb60), '≥1 db: KO', (parseInt(f.bevDb60)||0)>=1?'hint-ko':'hint')}
+    </div>
+    <div class="sub-title">Support projektek</div>
+    <div class="row">
+      ${fld('Support projekt: 80% alatt &amp; &gt;2 óra ráfordítás sprintben (db)', numHtml('suppDb80',f.suppDb80), '1-2 db: −50% | ≥3 db: −100%', (parseInt(f.suppDb80)||0)>=3?'hint-ko':'hint')}
+    </div>
+
+    ${sectionTitleHtml('🎯 Tervezési pontosság (10%)', st.tervezes)}
+    <div style="font-size:11px;color:#888;background:#f9f9f7;border-radius:6px;padding:6px 10px;margin-bottom:8px">
+      Kiemelt el nem készült → <strong>KO</strong> · Kikerült/El nem készült óra arány >10% → −50% per tétel
+    </div>
+    <div class="row">
+      ${fld('El nem készült kiemelt feladat?', selHtml('kiemeltElNemKeszult',f.kiemeltElNemKeszult), f.kiemeltElNemKeszult==='igen'?'⚠ KO – 100% elvész':'Igen → KO (0 pont)', f.kiemeltElNemKeszult==='igen'?'hint-ko':'hint')}
+    </div>
+    <div class="row">
+      ${fld('Betervezett mérfölkövek összesen (óra)', numHtml('tervezettOsszesen',f.tervezettOsszesen), 'Az arányok alapja')}
+      ${fld('Kikerült feladatok (óra)', numHtml('kikerultOra',f.kikerultOra), (kikerultR>0.10?'⚠ ':'')+'Arány: '+(tervOssz>0?(kikerultR*100).toFixed(1)+'%':'–')+' | >10%: −50%', kikerultR>0.10?'hint-ko':'hint')}
+      ${fld('El nem készült feladatok (óra)', numHtml('elNemKeszultOra',f.elNemKeszultOra), (elNemR>0.10?'⚠ ':'')+'Arány: '+(tervOssz>0?(elNemR*100).toFixed(1)+'%':'–')+' | >10%: −50%', elNemR>0.10?'hint-ko':'hint')}
+    </div>
+
+    ${sectionTitleHtml('📌 Feladatrendezettség (15%)', st.feladatrendezettsg, frBadge||undefined)}
+    <div style="font-size:11px;color:#888;background:#f9f9f7;border-radius:6px;padding:6px 10px;margin-bottom:8px">
+      Hibapont: normál = 1, súlyos = 2 · <strong>0 hp → 100 pont</strong> · <strong>1–3 hp → 50 pont</strong> · <strong>≥4 hp → KO</strong>
+    </div>
+    <div class="sub-title">⛔ Negatív tételek</div>
+    <div class="row">
+      ${fld('Lejárt feldolgozandó (db)', numHtml('lejaFeldolg',f.lejaFeldolg), '1 hp/db')}
+      ${fld('Lejárt felügyelt észrevételek (db)', numHtml('lejaFelug',f.lejaFelug), '>25 db → 1 hp')}
+      ${fld('Lejárt megoldási javaslat szükséges?', selHtml('lejaMegoldasi',f.lejaMegoldasi), 'Igen → 2 hp (súlyos)')}
+    </div>
+    <div class="row">
+      ${fld('Lejárt megkezdett feladatok (db)', numHtml('lejaMegkezdett',f.lejaMegkezdett), '>25 db → 1 hp')}
+      ${fld('Lejárt betervezett kérések (db)', numHtml('lejaBetery',f.lejaBetery), '>3 db → 1 hp')}
+      ${fld('Projekt betervezett kérés nélkül (db)', numHtml('projKeres',f.projKeres), '1 hp/db')}
+    </div>
+    <div class="row">
+      ${fld('Probléma-sürgető e-mail ügyvezetőnek?', selHtml('problemaSurgeto',f.problemaSurgeto), 'Igen → 2 hp (súlyos)')}
+      ${fld('Naptárkocka feladat-kapcsolat (%)', numHtml('naptarKocka',f.naptarKocka), naptarVal<90?'⚠ <90% → 1 hp':'<90%: 1 hp', naptarVal<90?'hint-ko':'hint')}
+      <div class="col"></div>
+    </div>
+  </div>
+
+  <div class="uv-card">
+    <div class="section-title" style="margin-top:0">🔓 Ügyvezetői korrekció (opcionális)</div>
+    <div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6">
+      Ügyvezetői jóváhagyással adható bónuszpont hálás ügyfél jelzésre, illetve szabályzat írásra/kiegészítésre.
+      ${uvPct>0&&!uvHasCondition?'<br><span style="color:#dc2626;font-weight:500">⚠ Korrekció van megadva, de egyik feltétel sem teljesül.</span>':''}
+    </div>
+    <div class="row">
+      ${fld('Hálás/lelkes ügyfél jelzés?', selHtml('uvLelkes',f.uvLelkes), 'Feltétel az ügyvezetői bónuszhoz')}
+      ${fld('Szabályzat írás/kiegészítés?', selHtml('uvSzabaly',f.uvSzabaly), 'Feltétel az ügyvezetői bónuszhoz')}
+    </div>
+    <div class="row">
+      ${fld('Kivel egyeztetve', txtHtml('uvKivel',f.uvKivel,'pl. Deák Attila'), 'Kötelező, ha korrekció van')}
+      ${fld('Megjegyzés', txtHtml('uvMegjegyzes',f.uvMegjegyzes,'pl. 3 ügyfél e-mail érkezett'), '')}
+      ${fld('Korrekció mértéke (%)', numHtml('uvKorrekcioPct',f.uvKorrekcioPct,0), uvPct>0?`Számított + ${uvPct}% hozzáadva`:'Hozzáadódik a számított ponthoz')}
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:14px">
+    <button class="btn" id="saveBtn-${team}" data-action="save" data-team="${team}">Sprint mentése</button>
+    <button class="btn-sm" data-action="clear" data-team="${team}">Törlés</button>
+  </div>`;
+}
+
+// ─── CompareTab ───────────────────────────────────────────────────────────────
+function renderCompareTab() {
+  const hkH = getHk(), zfH = getZf();
+  const qtrLabel = getActiveQtr().label;
+  if (!hkH.length && !zfH.length) return `<div style="color:#888;padding:20px">Még nincs mentett sprint a(z) <strong>${qtrLabel}</strong> negyedévben.</div>`;
+  const hkAvg = getLastGongyolt(hkH), zfAvg = getLastGongyolt(zfH);
+  const rows = [['🟣 Holdkő',hkAvg],['🟠 Zafír',zfAvg]].map(([lbl,avg])=>`
+    <tr>
+      <td style="font-weight:600">${lbl}</td>
+      <td style="font-weight:600;color:${avg.penzes!==null&&avg.penzes<PENZES_CEL?'#dc2626':'#059669'}">${avg.penzes!==null?avg.penzes+'%':'–'}</td>
+      <td style="color:#888">${PENZES_CEL}%</td>
+      <td>${avg.penzes!==null?(avg.penzes<PENZES_CEL?'<span class="warn-badge">⚠ Cél alatt</span>':'<span class="rag-green" style="font-size:11px">● OK</span>'):''}</td>
+      <td style="font-weight:600;color:${avg.termeles!==null&&avg.termeles<TERMELES_CEL?'#dc2626':'#059669'}">${avg.termeles!==null?avg.termeles+'%':'–'}</td>
+      <td style="color:#888">${TERMELES_CEL}%</td>
+      <td>${avg.termeles!==null?(avg.termeles<TERMELES_CEL?'<span class="warn-badge">⚠ Cél alatt</span>':'<span class="rag-green" style="font-size:11px">● OK</span>'):''}</td>
+    </tr>`).join('');
+  return `
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:4px">Sprint score összehasonlítás – <span style="color:#888;font-weight:400">${qtrLabel}</span></div>
+    <div class="chart-wrap" style="margin-top:10px"><canvas id="compareChart"></canvas></div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:12px">
+      <span style="color:#7F77DD;font-weight:600">● Holdkő</span>
+      <span style="color:#EF9F27;font-weight:600">● Zafír</span>
+      <span style="color:#dc2626">— Elvárás (85)</span>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:10px">Göngyölt tény értékek (legutóbbi sprint alapján)</div>
+    <table>
+      <thead><tr>${['','Göngyölt pénzes tény','Cél','Státusz','Göngyölt termelés/tám. tény','Cél','Státusz'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function initChart() {
+  const ctx = document.getElementById('compareChart'); if (!ctx) return;
+  if (compareChartInstance) { compareChartInstance.destroy(); compareChartInstance=null; }
+  const hkH=getHk(), zfH=getZf();
+  const maxLen = Math.max(hkH.length, zfH.length); if (!maxLen) return;
+  const labels = Array.from({length:maxLen},(_,i)=>{
+    const h=hkH[i], z=zfH[i];
+    return (h&&h.sprintNev)||(z&&z.sprintNev)||`S${i+1}`;
+  });
+  compareChartInstance = new Chart(ctx, {
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Holdkő',data:hkH.map(h=>h.total),borderColor:'#7F77DD',pointBackgroundColor:'#7F77DD',pointRadius:5,tension:0.3,fill:false},
+      {label:'Zafír', data:zfH.map(h=>h.total),borderColor:'#EF9F27',pointBackgroundColor:'#EF9F27',pointRadius:5,tension:0.3,fill:false},
+      {label:'Elvárás',data:Array(Math.max(labels.length,2)).fill(85),borderColor:'#dc2626',borderDash:[4,3],pointRadius:0,fill:false,borderWidth:1.5},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{y:{min:50,max:105,grid:{color:'#f0f0ec'}}},
+      plugins:{legend:{display:false}}}
+  });
+}
+
+// ─── GuideTab ─────────────────────────────────────────────────────────────────
+function renderGuideTab() {
+  const pp=[
+    {icon:'💰',name:'Pénzes arány',w:30,desc:'Sprint szintű tény/terv arány alapján 0–100 pont. Göngyölt % is bevihető.'},
+    {icon:'⚙️',name:'Termelés/támogatás arány',w:20,desc:'60% alatti sprint érték automatikus PIROS státuszt vált ki.'},
+    {icon:'📋',name:'Elszámolási fegyelem',w:10,desc:'Késedelmes elszámolás / számlázás: 1 db → −50% | ≥2 db → KO'},
+    {icon:'🔍',name:'Munkaminőség',w:15,desc:'Bevezetési: 1-2 db 80% alatt → −50% | ≥3 db 80% alatt vagy ≥1 db 60% alatt → KO<br>Support (80% alatt <em>és</em> sprintben >2 óra ráfordítás): 1-2 db → −50% | ≥3 db → −100%'},
+    {icon:'🎯',name:'Tervezési pontosság',w:10,desc:'El nem készült kiemelt → KO · Kikerült/el nem készült óra >10% → −50% per tétel'},
+    {icon:'📌',name:'Feladatrendezettség',w:15,desc:'0 hp → 100 pont · 1–3 hp → 50 pont · ≥4 hp → KO<br>Hibák: lejárt feldolg. (1hp/db), felügyelt >25db (1hp), megoldási javaslat (2hp), megkezdett >25db (1hp), betervezett kérés >3db (1hp), projekt kérés nélkül (1hp/db), probléma-sürgető (2hp), naptárkocka &lt;90% (1hp)'},
+    {icon:'🔓',name:'Ügyvezetői korrekció',w:0,desc:'Ügyvezetői jóváhagyással bónusz % adható. A korrekció a számított ponthoz adódik hozzá (pl. 78+10=88). Dokumentálás kötelező.'},
+    {icon:'📅',name:'Negyedév-kezelés',w:0,desc:'Minden negyedév (tavasz/nyár/ősz/tél) önálló sprintsorral rendelkezik. Lezárt negyedévek csak olvashatók. Új negyedévet a "＋ Új negyedév" gombbal hozz létre – az előző adatok megmaradnak.'},
+  ];
+  return pp.map(p=>`
+    <div class="card" style="margin-bottom:8px">
+      <div style="font-weight:600;margin-bottom:4px">${p.icon} ${p.name}${p.w?' <span style="color:#888;font-weight:400">('+p.w+'%)</span>':''}</div>
+      <div style="font-size:12px;color:#555;line-height:1.8">${p.desc}</div>
+    </div>`).join('') + `
+  <div class="card" style="background:#fffbeb;border:1px solid #fde68a">
+    <div style="font-weight:600;margin-bottom:4px">📊 Negyedéves cél</div>
+    <div style="font-size:12px;color:#555">7 sprint · Max 700 pont · Elvárás: 595 pont (85%) · ≥85p → zöld · 70–84p → sárga · &lt;70p → piros</div>
+  </div>`;
+}
+
+// ─── Render engine ────────────────────────────────────────────────────────────
+function renderTabBar() {
+  const tabs=[{key:'holdko',label:'🟣 Holdkő'},{key:'zafir',label:'🟠 Zafír'},{key:'compare',label:'Összehasonlítás'},{key:'guide',label:'Útmutató'}];
+  const bar=document.getElementById('tabBar');
+  bar.innerHTML=tabs.map(t=>`<button class="tab-btn${activeTab===t.key?' active':''}" data-tab="${t.key}">${t.label}</button>`).join('');
+  bar.onclick=e=>{const tab=e.target.dataset.tab;if(tab&&tab!==activeTab){activeTab=tab;render();}};
+}
+
+function render() {
+  renderTabBar();
+  renderQtrBar();
+  const el=document.getElementById('tabContent');
+  if (activeTab==='holdko'||activeTab==='zafir') {
+    el.innerHTML=renderTeamTab(activeTab);
+  } else if (activeTab==='compare') {
+    el.innerHTML=renderCompareTab();
+    requestAnimationFrame(()=>initChart());
+  } else {
+    el.innerHTML=renderGuideTab();
+  }
+  attachEvents();
+}
+
+function attachEvents() {
+  const content=document.getElementById('tabContent');
+  const team=activeTab;
+  if (team!=='holdko'&&team!=='zafir') return;
+
+  // Csak select/legördülő mezők – ezeknél nincs gépelés, azonnal frissíthetők
+  const liveReRender = new Set([
+    'kiemeltElNemKeszult',
+    'lejaMegoldasi','problemaSurgeto',
+    'uvLelkes','uvSzabaly',
+  ]);
+  // Szám- és szövegmezők – csak blur (change) után frissít, gépelés közben nem
+  const changeOnlyReRender = new Set([
+    'kesedelmasElszamolasDb','szamlaKesedelemDb',
+    'bevDb80','bevDb60','suppDb80',
+    'naptarKocka',
+    'lejaFeldolg','lejaFelug','lejaMegkezdett','lejaBetery','projKeres',
+    'uvKorrekcioPct',
+    'tervezettOsszesen','kikerultOra','elNemKeszultOra',
+    'penzesAny','penzesTerv','penzesGongyolt',
+    'termelesTamAny','termelesTamTerv','termelesTamGongyolt',
+  ]);
+
+  content.addEventListener('input',e=>{
+    const f=e.target.dataset.field;
+    if(f){ forms[team][f]=e.target.value; if(liveReRender.has(f)) render(); }
+  });
+  content.addEventListener('change',e=>{
+    const f=e.target.dataset.field;
+    if(f){ forms[team][f]=e.target.value; if(liveReRender.has(f)||changeOnlyReRender.has(f)) render(); }
+  });
+
+  content.addEventListener('click',async e=>{
+    const action=e.target.dataset.action, t=e.target.dataset.team;
+    if(!action||!t) return;
+    if(action==='save'){
+      const f=forms[t];
+      if(!f.sprintNev){alert('Add meg a sprint nevét!');return;}
+      if((parseFloat(f.uvKorrekcioPct)||0)>0&&!f.uvKivel){
+        if(!confirm('Ügyvezetői korrekció van megadva, de nincs megadva kivel egyeztetve. Folytatod?')) return;
+      }
+      const btn=document.getElementById(`saveBtn-${t}`);
+      if(btn) btn.disabled=true;
+      const result=calcScore(f);
+      lastResults[t]=result;
+      const entry={...f,...result,savedAt:new Date().toISOString()};
+      const qtr=quartersData[activeQuarterKey];
+      if(t==='holdko') qtr.hk=[...qtr.hk,entry];
+      else qtr.zf=[...qtr.zf,entry];
+      forms[t]={...emptyForm};
+      render();
+      await saveToConfluence();
+    }
+    if(action==='clear'){
+      forms[t]={...emptyForm};
+      lastResults[t]=null;
+      render();
+    }
+  });
+}
+
+document.getElementById('syncBar').addEventListener('click',async e=>{
+  const btn=e.target.closest('button');
+  if(!btn) return;
+  if(btn.dataset.action==='refresh'){await loadFromConfluence();render();}
+  if(btn.dataset.action==='account'){showAuthModal(()=>{loadFromConfluence().then(()=>render());});}
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async()=>{
+  await loadFromConfluence();
+  renderTabBar();
+  render();
+  const bar=document.getElementById('syncBar');
+  const btnR=document.createElement('button');
+  btnR.className='btn-sm';btnR.textContent='↻ Frissítés';btnR.dataset.action='refresh';
+  bar.appendChild(btnR);
+  const btnA=document.createElement('button');
+  btnA.className='btn-sm';btnA.textContent='🔑 Fiók';btnA.dataset.action='account';
+  btnA.title='Confluence bejelentkezési adatok módosítása';
+  bar.appendChild(btnA);
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
