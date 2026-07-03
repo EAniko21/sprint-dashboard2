@@ -207,6 +207,33 @@ async function saveToGitHub() {
 }
 
 
+// ─── Konstansok ───────────────────────────────────────────────────────────────
+const TOTAL_SPRINTS = 7;
+const TARGET_POINTS = 595;
+const MAX_POINTS    = 700;
+const PENZES_CEL    = 30;
+const TERMELES_CEL  = 60;
+const WEIGHTS = { penzes:30, termeles:20, elszamolas:10, munkaminoseg:15, tervezes:10, feladatrendezettsg:15 };
+const TEAM_CONFIG = {
+  holdko: { label:'Holdkő', color:'#7F77DD' },
+  zafir:  { label:'Zafír',  color:'#EF9F27' },
+};
+
+const QUARTER_ORDER = ['tavasz','nyar','osz','tel'];
+const QUARTER_LABELS = { tavasz:'tavasz', nyar:'nyár', osz:'ősz', tel:'tél' };
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let activeTab = 'holdko';
+let compareChartInstance = null;
+let quartersData = {};
+let activeQuarterKey = '';
+let newQtrMode = false;
+
+function getActiveQtr() { return quartersData[activeQuarterKey] || { label:'–', hk:[], zf:[] }; }
+function getHk() { return getActiveQtr().hk || []; }
+function getZf() { return getActiveQtr().zf || []; }
+
+
 function applyData(data) {
   if (!data) { initDefaultQuarter(); return; }
   // Új formátum: quartersData + activeQuarterKey
