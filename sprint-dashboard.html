@@ -84,7 +84,7 @@ h1 { font-size: 18px; font-weight: 600; margin: 0; }
   </div>
   <div id="syncBar" class="sync-bar">
     <span class="sync-dot sync-loading"></span>
-    <span id="syncStatus">Betöltés Confluenceból...</span>
+    <span id="syncStatus">Betöltés...</span>
   </div>
   <!-- Quarter selector -->
   <div class="qtr-bar" id="qtrBar">
@@ -102,165 +102,110 @@ window.onerror = function(msg, src, line, col, err) {
   el.innerHTML = '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:20px;color:#991b1b;font-size:13px"><strong>JavaScript hiba</strong><br>' + msg + '<br>Sor: ' + line + '<br>' + (err && err.stack ? '<pre style="font-size:11px;white-space:pre-wrap">' + err.stack + '</pre>' : '') + '</div>';
 };
 
-// ─── Confluence config ────────────────────────────────────────────────────────
-const CLOUD_ID  = '30196d32-a694-4ae2-81c3-b932085784e5';
-const PAGE_ID   = '1134821396';
-const CONF_BASE = 'https://direktor-szoftver.atlassian.net';
-const MCP_GET   = 'mcp__a82fea18-4959-4e30-951f-083024b71129__getConfluencePage';
-const MCP_PUT   = 'mcp__a82fea18-4959-4e30-951f-083024b71129__updateConfluencePage';
+// ─── GitHub config ───────────────────────────────────────────────────────────
+const GH_OWNER  = 'eaniko21';
+const GH_REPO   = 'sprint-dashboard2';
+const GH_FILE   = 'dashboard-data.json';
+const GH_RAW    = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}`;
+const GH_API    = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
 const LS_KEY    = 'sprint_dashboard_v7';
-const LS_AUTH_KEY = 'sprint_dashboard_auth';
+const LS_AUTH_KEY = 'sprint_dashboard_gh_auth';
 
-function getConfAuth() {
-  try {
-    const a = JSON.parse(localStorage.getItem(LS_AUTH_KEY) || '{}');
-    if (a.email && a.token) return btoa(a.email + ':' + a.token);
-  } catch {}
-  return null;
+function getGhToken() {
+  try { return localStorage.getItem(LS_AUTH_KEY) || null; } catch { return null; }
 }
 
 function showAuthModal(onSuccess) {
-  let existing = {};
-  try { existing = JSON.parse(localStorage.getItem(LS_AUTH_KEY) || '{}'); } catch {}
+  const existing = getGhToken() || '';
   const overlay = document.createElement('div');
   overlay.id = 'authOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;max-width:400px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,.18)">
-      <div style="font-size:16px;font-weight:600;margin-bottom:6px">Confluence bejelentkezés</div>
-      <div style="font-size:12px;color:#777;margin-bottom:18px">Az adatok tárolásához szükséges az Atlassian azonosítód. A token csak a böngésződben tárolódik – a fájlban nincs benne.</div>
-      <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:4px">E-mail</label>
-      <input id="authEmail" type="email" placeholder="nev@direktor.hu" value="${existing.email||''}" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #d0d0cb;font-size:13px;margin-bottom:12px">
-      <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:4px">Atlassian API token</label>
-      <input id="authToken" type="password" placeholder="ATATT3x..." value="${existing.token||''}" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #d0d0cb;font-size:13px;margin-bottom:6px">
-      <div style="font-size:11px;color:#999;margin-bottom:18px">Token létrehozása: <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color:#059669">id.atlassian.com</a></div>
+    <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;max-width:420px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px">GitHub token megadása</div>
+      <div style="font-size:12px;color:#777;margin-bottom:18px">A sprint adatok mentéséhez GitHub Personal Access Token szükséges. A token csak a te böngésződben tárolódik.</div>
+      <label style="font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:4px">GitHub Personal Access Token</label>
+      <input id="authToken" type="password" placeholder="ghp_..." value="${existing}" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #d0d0cb;font-size:13px;margin-bottom:6px">
+      <div style="font-size:11px;color:#999;margin-bottom:18px">
+        Token: <a href="https://github.com/settings/tokens/new" target="_blank" style="color:#059669">github.com/settings/tokens</a> · Classic token · Engedély: <strong>repo</strong>
+      </div>
       <div id="authError" style="font-size:12px;color:#dc2626;margin-bottom:10px;display:none"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button onclick="document.getElementById('authOverlay').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid #d0d0cb;background:#fff;cursor:pointer;font-size:13px">Mégsem</button>
-        <button id="authSaveBtn" onclick="saveAuth()" style="padding:8px 20px;border-radius:8px;border:none;background:#1a1a18;color:#fff;cursor:pointer;font-size:13px;font-weight:500">Mentés és betöltés</button>
+        <button onclick="saveAuth()" style="padding:8px 20px;border-radius:8px;border:none;background:#1a1a18;color:#fff;cursor:pointer;font-size:13px;font-weight:500">Mentés</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
   window._authOnSuccess = onSuccess;
-  setTimeout(() => { const e = document.getElementById('authEmail'); if (e && !e.value) e.focus(); else { const t = document.getElementById('authToken'); if (t) t.focus(); } }, 50);
+  setTimeout(() => { const t = document.getElementById('authToken'); if (t) t.focus(); }, 50);
 }
 
 function saveAuth() {
-  const email = (document.getElementById('authEmail')?.value || '').trim();
   const token = (document.getElementById('authToken')?.value || '').trim();
   const errEl = document.getElementById('authError');
-  if (!email || !token) { errEl.textContent = 'Add meg az e-mail címet és a tokent.'; errEl.style.display='block'; return; }
-  try { localStorage.setItem(LS_AUTH_KEY, JSON.stringify({email, token})); } catch {}
+  if (!token) { errEl.textContent = 'Add meg a GitHub tokent.'; errEl.style.display='block'; return; }
+  try { localStorage.setItem(LS_AUTH_KEY, token); } catch {}
   document.getElementById('authOverlay')?.remove();
   if (typeof window._authOnSuccess === 'function') window._authOnSuccess();
 }
 
 function ensureAuth(then) {
-  if (getConfAuth()) { then(); return; }
+  if (getGhToken()) { then(); return; }
   showAuthModal(then);
 }
 
-// ─── Konstansok ───────────────────────────────────────────────────────────────
-const TOTAL_SPRINTS = 7;
-const TARGET_POINTS = 595;
-const MAX_POINTS    = 700;
-const PENZES_CEL    = 30;
-const TERMELES_CEL  = 60;
-const WEIGHTS = { penzes:30, termeles:20, elszamolas:10, munkaminoseg:15, tervezes:10, feladatrendezettsg:15 };
-const TEAM_CONFIG = {
-  holdko: { label:'Holdkő', color:'#7F77DD' },
-  zafir:  { label:'Zafír',  color:'#EF9F27' },
-};
-
-// Előre definiált negyedévek sorrendje
-const QUARTER_ORDER = ['tavasz','nyar','osz','tel'];
-const QUARTER_LABELS = { tavasz:'tavasz', nyar:'nyár', osz:'ősz', tel:'tél' };
-
-// ─── State ────────────────────────────────────────────────────────────────────
-let activeTab = 'holdko';
-let compareChartInstance = null;
-
-// Negyedév-kezelés
-// quartersData: { "2026-nyar": { label:"2026 nyár", hk:[], zf:[] }, ... }
-// activeQuarterKey: "2026-nyar"
-let quartersData = {};
-let activeQuarterKey = '';
-let newQtrMode = false;
-
-function getActiveQtr() { return quartersData[activeQuarterKey] || { label:'–', hk:[], zf:[] }; }
-function getHk() { return getActiveQtr().hk || []; }
-function getZf() { return getActiveQtr().zf || []; }
-
-// ─── Confluence I/O ───────────────────────────────────────────────────────────
-async function loadFromConfluence() {
+// ─── GitHub I/O ───────────────────────────────────────────────────────────────
+async function loadFromGitHub() {
   setSyncState('loading', 'Betöltés...');
   try {
-    let bodyText = '';
-    if (window.cowork) {
-      const r = await window.cowork.callMcpTool(MCP_GET, { cloudId:CLOUD_ID, pageId:PAGE_ID, contentFormat:'markdown' });
-      if (r.isError) throw new Error('MCP hiba');
-      const raw = r.structuredContent ?? JSON.parse(r.content[0].text);
-      bodyText = extractBodyText(raw);
-    } else {
-      const auth = getConfAuth();
-      if (!auth) { ensureAuth(() => loadFromConfluence()); return; }
-      const resp = await fetch(`${CONF_BASE}/wiki/rest/api/content/${PAGE_ID}?expand=body.storage`, {
-        headers: { 'Authorization': 'Basic ' + auth, 'Accept': 'application/json' }
-      });
-      if (resp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => loadFromConfluence()); return; }
-      if (!resp.ok) throw new Error('Confluence API hiba: ' + resp.status);
-      const jdata = await resp.json();
-      bodyText = jdata.body?.storage?.value || '';
+    const resp = await fetch(GH_RAW + '?t=' + Date.now());
+    if (resp.status === 404) {
+      initDefaultQuarter();
+      setSyncState('ok', 'Új – nincs még mentett adat');
+      return;
     }
-    const data = extractJson(bodyText);
+    if (!resp.ok) throw new Error('Betöltés sikertelen: ' + resp.status);
+    const data = await resp.json();
     applyData(data);
     try { localStorage.setItem(LS_KEY, JSON.stringify({quartersData, activeQuarterKey})); } catch{}
     setSyncState('ok', 'Frissítve: ' + new Date().toLocaleTimeString('hu-HU'));
   } catch(e) {
-    console.warn('Confluence betöltés sikertelen:', e);
+    console.warn('GitHub betöltés sikertelen:', e);
     try { const v=localStorage.getItem(LS_KEY); if(v){const p=JSON.parse(v);quartersData=p.quartersData||{};activeQuarterKey=p.activeQuarterKey||'';} } catch{}
     if (!Object.keys(quartersData).length) initDefaultQuarter();
-    setSyncState('error', e.message || 'Confluence nem elérhető – helyi adatok betöltve');
+    setSyncState('error', e.message || 'Betöltés sikertelen – helyi adatok');
   }
 }
 
-async function saveToConfluence() {
-  setSyncState('saving', 'Mentés Confluenceba...');
+async function saveToGitHub() {
+  setSyncState('saving', 'Mentés...');
   try {
-    const payload = { quartersData, activeQuarterKey };
-    const json = JSON.stringify(payload);
-    const storageBody = '<p>Ez az oldal a Cowork sprint dashboard adatait tárolja. Automatikusan frissül – kézzel ne módosítsd!</p><pre><code class="language-json">' + escHtml(json) + '</code></pre>';
-    if (window.cowork) {
-      const r = await window.cowork.callMcpTool(MCP_PUT, { cloudId:CLOUD_ID, pageId:PAGE_ID, contentFormat:'html', body:storageBody });
-      if (r.isError) throw new Error('MCP hiba');
-    } else {
-      const auth = getConfAuth();
-      if (!auth) { ensureAuth(() => saveToConfluence()); return; }
-      const vResp = await fetch(`${CONF_BASE}/wiki/rest/api/content/${PAGE_ID}`, {
-        headers: { 'Authorization': 'Basic ' + auth, 'Accept': 'application/json' }
-      });
-      if (vResp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => saveToConfluence()); return; }
-      if (!vResp.ok) throw new Error('Verzió lekérés sikertelen');
-      const vData = await vResp.json();
-      const nextVer = (vData.version?.number || 0) + 1;
-      const putResp = await fetch(`${CONF_BASE}/wiki/rest/api/content/${PAGE_ID}`, {
-        method: 'PUT',
-        headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          version: { number: nextVer },
-          title: 'Sprint mérőszámok – adatok [NE SZERKESZD KÉZZEL]',
-          type: 'page',
-          body: { storage: { value: storageBody, representation: 'storage' } }
-        })
-      });
-      if (!putResp.ok) throw new Error('Mentés sikertelen: ' + putResp.status);
-    }
+    const token = getGhToken();
+    if (!token) { ensureAuth(() => saveToGitHub()); return; }
+    const payload = JSON.stringify({quartersData, activeQuarterKey}, null, 2);
+    const encoded = btoa(unescape(encodeURIComponent(payload)));
+    let sha = '';
+    const getResp = await fetch(GH_API, {
+      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' }
+    });
+    if (getResp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => saveToGitHub()); return; }
+    if (getResp.ok) { const fd = await getResp.json(); sha = fd.sha || ''; }
+    const body = { message: 'Sprint adatok frissítve', content: encoded };
+    if (sha) body.sha = sha;
+    const putResp = await fetch(GH_API, {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
+      body: JSON.stringify(body)
+    });
+    if (putResp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => saveToGitHub()); return; }
+    if (!putResp.ok) { const err = await putResp.json().catch(()=>({})); throw new Error('Mentés: ' + (err.message || putResp.status)); }
     try { localStorage.setItem(LS_KEY, JSON.stringify({quartersData, activeQuarterKey})); } catch{}
     setSyncState('ok', 'Mentve: ' + new Date().toLocaleTimeString('hu-HU'));
   } catch(e) {
-    setSyncState('error', 'Confluence mentés sikertelen – csak helyi tárolás');
+    setSyncState('error', 'Mentés sikertelen – ' + (e.message || 'ismeretlen hiba'));
   }
 }
+
 
 function applyData(data) {
   if (!data) { initDefaultQuarter(); return; }
@@ -604,7 +549,7 @@ function renderQtrBar() {
     newQtrMode = false;
     forms = { holdko:{...emptyForm}, zafir:{...emptyForm} };
     lastResults = { holdko:null, zafir:null };
-    saveToConfluence();
+    saveToGitHub();
     render();
   };
 }
@@ -1023,7 +968,7 @@ function setupContentEvents() {
       else qtr.zf=[...qtr.zf,entry];
       forms[t]={...emptyForm};
       render();
-      await saveToConfluence();
+      await saveToGitHub();
     }
     if(action==='clear'){
       forms[t]={...emptyForm};
@@ -1036,13 +981,13 @@ function setupContentEvents() {
 document.getElementById('syncBar').addEventListener('click',async e=>{
   const btn=e.target.closest('button');
   if(!btn) return;
-  if(btn.dataset.action==='refresh'){await loadFromConfluence();render();}
-  if(btn.dataset.action==='account'){showAuthModal(()=>{loadFromConfluence().then(()=>render());});}
+  if(btn.dataset.action==='refresh'){await loadFromGitHub();render();}
+  if(btn.dataset.action==='account'){showAuthModal(()=>{loadFromGitHub().then(()=>render());});}
 });
 
 // ─── Init ──────────────────────────────────────────────────────────────────────────────
 (async()=>{
-  await loadFromConfluence();
+  await loadFromGitHub();
   renderTabBar();
   render();
   const bar=document.getElementById('syncBar');
