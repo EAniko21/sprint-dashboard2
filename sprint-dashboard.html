@@ -966,49 +966,52 @@ function render() {
   } else {
     el.innerHTML=renderGuideTab();
   }
-  attachEvents();
+  setupContentEvents();
 }
 
-function attachEvents() {
-  const content=document.getElementById('tabContent');
-  const team=activeTab;
-  if (team!=='holdko'&&team!=='zafir') return;
+// Csak select/legördülő mezők – ezeknél nincs gépelés, azonnal frissíthetők
+const liveReRender = new Set([
+  'kiemeltElNemKeszult',
+  'lejaMegoldasi','problemaSurgeto',
+  'uvLelkes','uvSzabaly',
+]);
+// Szám- és szövegmezők – csak blur (change) után frissít, gépelés közben nem
+const changeOnlyReRender = new Set([
+  'kesedelmasElszamolasDb','szamlaKesedelemDb',
+  'bevDb80','bevDb60','suppDb80',
+  'naptarKocka',
+  'lejaFeldolg','lejaFelug','lejaMegkezdett','lejaBetery','projKeres',
+  'uvKorrekcioPct',
+  'tervezettOsszesen','kikerultOra','elNemKeszultOra',
+  'penzesAny','penzesTerv','penzesGongyolt',
+  'termelesTamAny','termelesTamTerv','termelesTamGongyolt',
+]);
 
-  // Csak select/legördülő mezők – ezeknél nincs gépelés, azonnal frissíthetők
-  const liveReRender = new Set([
-    'kiemeltElNemKeszult',
-    'lejaMegoldasi','problemaSurgeto',
-    'uvLelkes','uvSzabaly',
-  ]);
-  // Szám- és szövegmezők – csak blur (change) után frissít, gépelés közben nem
-  const changeOnlyReRender = new Set([
-    'kesedelmasElszamolasDb','szamlaKesedelemDb',
-    'bevDb80','bevDb60','suppDb80',
-    'naptarKocka',
-    'lejaFeldolg','lejaFelug','lejaMegkezdett','lejaBetery','projKeres',
-    'uvKorrekcioPct',
-    'tervezettOsszesen','kikerultOra','elNemKeszultOra',
-    'penzesAny','penzesTerv','penzesGongyolt',
-    'termelesTamAny','termelesTamTerv','termelesTamGongyolt',
-  ]);
+function setupContentEvents() {
+  const content=document.getElementById('tabContent');
+  if (content._eventsReady) return;
+  content._eventsReady = true;
 
   content.addEventListener('input',e=>{
-    const f=e.target.dataset.field;
-    if(f){ forms[team][f]=e.target.value; if(liveReRender.has(f)) render(); }
+    const field=e.target.dataset.field;
+    const team=activeTab;
+    if(field&&(team==='holdko'||team==='zafir')){ forms[team][field]=e.target.value; if(liveReRender.has(field)) render(); }
   });
   content.addEventListener('change',e=>{
-    const f=e.target.dataset.field;
-    if(f){ forms[team][f]=e.target.value; if(liveReRender.has(f)||changeOnlyReRender.has(f)) render(); }
+    const field=e.target.dataset.field;
+    const team=activeTab;
+    if(field&&(team==='holdko'||team==='zafir')){ forms[team][field]=e.target.value; if(liveReRender.has(field)||changeOnlyReRender.has(field)) render(); }
   });
 
   content.addEventListener('click',async e=>{
-    const action=e.target.dataset.action, t=e.target.dataset.team;
+    const action=e.target.closest('[data-action]')?.dataset.action;
+    const t=e.target.closest('[data-team]')?.dataset.team;
     if(!action||!t) return;
     if(action==='save'){
       const f=forms[t];
-      if(!f.sprintNev){alert('Add meg a sprint nevét!');return;}
+      if(!f.sprintNev){alert('Add meg a sprint nev\u00e9t!');return;}
       if((parseFloat(f.uvKorrekcioPct)||0)>0&&!f.uvKivel){
-        if(!confirm('Ügyvezetői korrekció van megadva, de nincs megadva kivel egyeztetve. Folytatod?')) return;
+        if(!confirm('\u00dcgyvezet\u0151i korrekci\u00f3 van megadva, de nincs megadva kivel egyeztetve. Folytatod?')) return;
       }
       const btn=document.getElementById(`saveBtn-${t}`);
       if(btn) btn.disabled=true;
@@ -1037,22 +1040,21 @@ document.getElementById('syncBar').addEventListener('click',async e=>{
   if(btn.dataset.action==='account'){showAuthModal(()=>{loadFromConfluence().then(()=>render());});}
 });
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ─── Init ──────────────────────────────────────────────────────────────────────────────
 (async()=>{
   await loadFromConfluence();
   renderTabBar();
   render();
   const bar=document.getElementById('syncBar');
   const btnR=document.createElement('button');
-  btnR.className='btn-sm';btnR.textContent='↻ Frissítés';btnR.dataset.action='refresh';
+  btnR.className='btn-sm';btnR.textContent='\u21bb Friss\u00edt\u00e9s';btnR.dataset.action='refresh';
   bar.appendChild(btnR);
   const btnA=document.createElement('button');
-  btnA.className='btn-sm';btnA.textContent='🔑 Fiók';btnA.dataset.action='account';
-  btnA.title='Confluence bejelentkezési adatok módosítása';
+  btnA.className='btn-sm';btnA.textContent='\ud83d\udd11 Fi\u00f3k';btnA.dataset.action='account';
+  btnA.title='Confluence bejelentkez\u00e9si adatok m\u00f3dos\u00edt\u00e1sa';
   bar.appendChild(btnA);
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
