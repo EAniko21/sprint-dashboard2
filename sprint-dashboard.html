@@ -610,7 +610,7 @@ function renderTeamTab(team) {
   const cfg = TEAM_CONFIG[team];
   const history = team==='holdko' ? getHk() : getZf();
   const f = forms[team], lr = lastResults[team];
-  const cumTotal = history.reduce((a,b)=>a+(b.total||0),0);
+  const cumTotal = history.reduce((a,b)=>a+(calcScore(b).total||0),0);
   const sprintsDone = history.length;
   const progressPct = Math.min(100,(cumTotal/TARGET_POINTS)*100);
   const onTrack = sprintsDone>0 ? (cumTotal/sprintsDone)>=85 : true;
@@ -724,21 +724,23 @@ function renderTeamTab(team) {
         <thead><tr>${['Sprint','Pont','Számított','Korr.','RAG','Pénzes','Termelés','Elszám.','Munka','Tervezés','Feladat'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
         <tbody>
           ${history.map((h,idx)=>{
-            const fr=Math.min(100,h.scores?.feladatrendezettsg||0);
+            const live=calcScore(h);
+            const sc=live.scores, ko=live.ko;
+            const fr=Math.min(100,sc.feladatrendezettsg||0);
             const uv=h.uvKorrekcioPct||0;
             const isBeingEdited = editingSprint && editingSprint.team===team && editingSprint.idx===idx;
             return `<tr${isBeingEdited?' style="background:#fef9c3"':''}>
               <td>${h.sprintNev} <button class="btn-sm" data-action="edit-sprint" data-editidx="${idx}" data-team="${team}" style="padding:1px 7px;font-size:11px" title="Szerkesztés">✏️</button></td>
-              <td style="font-weight:600">${h.total}</td>
-              <td style="color:#888;font-size:11px">${h.rawTotal??h.total}</td>
+              <td style="font-weight:600">${live.total}</td>
+              <td style="color:#888;font-size:11px">${live.rawTotal??live.total}</td>
               <td>${uv>0?`<span class="bonus-badge">+${uv}%</span>`:''}</td>
-              <td>${ragHtml(h.rag)}</td>
-              ${[h.scores?.penzes,h.scores?.termeles].map(v=>`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
+              <td>${ragHtml(live.rag)}</td>
+              ${[sc.penzes,sc.termeles].map(v=>`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
               ${[
-                [h.scores?.elszamolas,h.ko?.elszamolas],
-                [h.scores?.munkaminoseg,h.ko?.munkaminoseg],
-                [h.scores?.tervezes,h.ko?.tervezes],
-                [fr,h.ko?.feladatrendezettsg]
+                [sc.elszamolas,ko.elszamolas],
+                [sc.munkaminoseg,ko.munkaminoseg],
+                [sc.tervezes,ko.tervezes],
+                [fr,ko.feladatrendezettsg]
               ].map(([v,isKo])=>isKo?`<td><span class="ko-badge">KO</span></td>`:`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
             </tr>`;
           }).join('')}
