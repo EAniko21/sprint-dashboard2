@@ -160,8 +160,9 @@ async function loadFromGitHub() {
   try {
     const resp = await fetch(GH_RAW + '?t=' + Date.now());
     if (resp.status === 404) {
-      initDefaultQuarter();
-      setSyncState('ok', 'Új – nincs még mentett adat');
+      try { const v=localStorage.getItem(LS_KEY); if(v){const p=JSON.parse(v);quartersData=p.quartersData||{};activeQuarterKey=p.activeQuarterKey||'';} } catch{}
+      if (!Object.keys(quartersData).length) initDefaultQuarter();
+      setSyncState('ok', Object.keys(quartersData).length > 0 ? 'Helyi adatok betöltve (nincs GitHub mentés még)' : 'Új – nincs még mentett adat');
       return;
     }
     if (!resp.ok) throw new Error('Betöltés sikertelen: ' + resp.status);
@@ -189,6 +190,10 @@ async function saveToGitHub() {
       headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' }
     });
     if (getResp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => saveToGitHub()); return; }
+    if (getResp.status === 403) {
+      const errBody = await getResp.json().catch(()=>({}));
+      throw new Error('403 – nincs írási jog a repóhoz. GitHub hibaüzenet: ' + (errBody.message || 'ismeretlen'));
+    }
     if (getResp.ok) { const fd = await getResp.json(); sha = fd.sha || ''; }
     const body = { message: 'Sprint adatok frissítve', content: encoded };
     if (sha) body.sha = sha;
@@ -198,11 +203,24 @@ async function saveToGitHub() {
       body: JSON.stringify(body)
     });
     if (putResp.status === 401) { localStorage.removeItem(LS_AUTH_KEY); ensureAuth(() => saveToGitHub()); return; }
-    if (!putResp.ok) { const err = await putResp.json().catch(()=>({})); throw new Error('Mentés: ' + (err.message || putResp.status)); }
+    if (putResp.status === 403) {
+      const errBody = await putResp.json().catch(()=>({}));
+      throw new Error('403 – nincs írási jog a repóhoz. GitHub hibaüzenet: ' + (errBody.message || 'ismeretlen'));
+    }
+    if (putResp.status === 422) {
+      const errBody = await putResp.json().catch(()=>({}));
+      throw new Error('422 – érvénytelen kérés. GitHub hibaüzenet: ' + (errBody.message || 'ismeretlen'));
+    }
+    if (!putResp.ok) {
+      const errBody = await putResp.json().catch(()=>({}));
+      throw new Error('HTTP ' + putResp.status + ' – ' + (errBody.message || 'ismeretlen hiba'));
+    }
     try { localStorage.setItem(LS_KEY, JSON.stringify({quartersData, activeQuarterKey})); } catch{}
     setSyncState('ok', 'Mentve: ' + new Date().toLocaleTimeString('hu-HU'));
   } catch(e) {
-    setSyncState('error', 'Mentés sikertelen – ' + (e.message || 'ismeretlen hiba'));
+    const msg = e.message || 'ismeretlen hiba';
+    setSyncState('error', 'Mentés sikertelen – ' + msg);
+    alert('❌ GitHub mentés sikertelen!\n\n' + msg + '\n\nEllenőrizd a tokent (Settings → Fiók gomb), és győződj meg róla, hogy a "repo" scope be van pipálva.');
   }
 }
 
@@ -327,16 +345,17 @@ function setSyncState(state, msg) {
 function calcScore(d) {
   let scores = {}, ko = {};
 
-  // 1. Pénzes arány (30%)
-  const penzesAny = parseFloat(d.penzesAny)||0;
-  const penzesTerv = parseFloat(d.penzesTerv)||PENZES_CEL;
-  scores.penzes = Math.min(100, Math.round((penzesTerv>0 ? penzesAny/penzesTerv : 0)*100));
+  // 1. Pénzes arány (30%) – bináris: göngyölt (vagy tény) ≥ 30% → 100, egyébként 0
+  const pGongyolt = parseFloat(d.penzesGongyolt);
+  const pAnyRaw   = parseFloat(d.penzesAny);
+  const pVal      = !isNaN(pGongyolt) ? pGongyolt : (!isNaN(pAnyRaw) ? pAnyRaw : NaN);
+  scores.penzes   = (!isNaN(pVal) && pVal >= PENZES_CEL) ? 100 : 0;
 
-  // 2. Termelés/támogatás (20%)
-  const termAny = parseFloat(d.termelesTamAny)||0;
-  const termTerv = parseFloat(d.termelesTamTerv)||TERMELES_CEL;
-  const autoPiros = termAny < 60;
-  scores.termeles = Math.min(100, Math.round((termTerv>0 ? termAny/termTerv : 0)*100));
+  // 2. Termelés/támogatás (20%) – bináris: göngyölt (vagy tény) ≥ 60% → 100, egyébként 0
+  const tGongyolt = parseFloat(d.termelesTamGongyolt);
+  const tAnyRaw   = parseFloat(d.termelesTamAny);
+  const tVal      = !isNaN(tGongyolt) ? tGongyolt : (!isNaN(tAnyRaw) ? tAnyRaw : NaN);
+  scores.termeles = (!isNaN(tVal) && tVal >= TERMELES_CEL) ? 100 : 0;
 
   // 3. Elszámolási fegyelem (10%)
   const kesDb    = parseInt(d.kesedelmasElszamolasDb)||0;
@@ -415,15 +434,19 @@ function calcScore(d) {
 function livePillarStatus(f) {
   const s = {};
 
-  // Pénzes – arányos, nincs KO
-  const pAny = parseFloat(f.penzesAny), pTerv = parseFloat(f.penzesTerv)||30;
-  if (f.penzesAny === '' || f.penzesAny === undefined || isNaN(pAny)) { s.penzes = 'neutral'; }
-  else { const r = pTerv>0 ? pAny/pTerv*100 : 0; s.penzes = r>=85?'green':r>=70?'amber':'red'; }
+  // Pénzes – bináris: göngyölt (vagy tény) ≥ 30% → zöld, egyébként piros
+  const pGongyoltLive = parseFloat(f.penzesGongyolt);
+  const pAnyLive      = parseFloat(f.penzesAny);
+  const pLiveVal      = !isNaN(pGongyoltLive) ? pGongyoltLive : pAnyLive;
+  if (isNaN(pLiveVal) && (f.penzesGongyolt===''||f.penzesGongyolt===undefined) && (f.penzesAny===''||f.penzesAny===undefined)) { s.penzes = 'neutral'; }
+  else { s.penzes = (!isNaN(pLiveVal) && pLiveVal >= PENZES_CEL) ? 'green' : 'red'; }
 
-  // Termelés – <60% auto piros, arányos
-  const tAny = parseFloat(f.termelesTamAny);
-  if (f.termelesTamAny === '' || f.termelesTamAny === undefined || isNaN(tAny)) { s.termeles = 'neutral'; }
-  else { const tTerv=parseFloat(f.termelesTamTerv)||60; const r=tTerv>0?tAny/tTerv*100:0; s.termeles = tAny<60?'red':r>=85?'green':'amber'; }
+  // Termelés – bináris: göngyölt (vagy tény) ≥ 60% → zöld, egyébként piros
+  const tGongyoltLive = parseFloat(f.termelesTamGongyolt);
+  const tAnyLive      = parseFloat(f.termelesTamAny);
+  const tLiveVal      = !isNaN(tGongyoltLive) ? tGongyoltLive : tAnyLive;
+  if (isNaN(tLiveVal) && (f.termelesTamGongyolt===''||f.termelesTamGongyolt===undefined) && (f.termelesTamAny===''||f.termelesTamAny===undefined)) { s.termeles = 'neutral'; }
+  else { s.termeles = (!isNaN(tLiveVal) && tLiveVal >= TERMELES_CEL) ? 'green' : 'red'; }
 
   // Elszámolás
   const kesDb = parseInt(f.kesedelmasElszamolasDb)||0, szDb = parseInt(f.szamlaKesedelemDb)||0;
@@ -515,8 +538,9 @@ const emptyForm = {
   uvLelkes:'nem', uvSzabaly:'nem', uvKivel:'', uvMegjegyzes:'', uvKorrekcioPct:'0',
 };
 
-let forms      = { holdko:{...emptyForm}, zafir:{...emptyForm} };
-let lastResults = { holdko:null, zafir:null };
+let forms        = { holdko:{...emptyForm}, zafir:{...emptyForm} };
+let lastResults  = { holdko:null, zafir:null };
+let editingSprint = null; // { team, idx } | null
 
 // ─── Quarter bar ──────────────────────────────────────────────────────────────
 function renderQtrBar() {
@@ -699,11 +723,12 @@ function renderTeamTab(team) {
       <table>
         <thead><tr>${['Sprint','Pont','Számított','Korr.','RAG','Pénzes','Termelés','Elszám.','Munka','Tervezés','Feladat'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
         <tbody>
-          ${history.map(h=>{
+          ${history.map((h,idx)=>{
             const fr=Math.min(100,h.scores?.feladatrendezettsg||0);
             const uv=h.uvKorrekcioPct||0;
-            return `<tr>
-              <td>${h.sprintNev}</td>
+            const isBeingEdited = editingSprint && editingSprint.team===team && editingSprint.idx===idx;
+            return `<tr${isBeingEdited?' style="background:#fef9c3"':''}>
+              <td>${h.sprintNev} <button class="btn-sm" data-action="edit-sprint" data-editidx="${idx}" data-team="${team}" style="padding:1px 7px;font-size:11px" title="Szerkesztés">✏️</button></td>
               <td style="font-weight:600">${h.total}</td>
               <td style="color:#888;font-size:11px">${h.rawTotal??h.total}</td>
               <td>${uv>0?`<span class="bonus-badge">+${uv}%</span>`:''}</td>
@@ -832,9 +857,12 @@ function renderFormHtml(f, tervOssz, kikerultR, elNemR, naptarVal, uvPct, uvHasC
     </div>
   </div>
 
-  <div style="display:flex;gap:10px;margin-top:14px">
-    <button class="btn" id="saveBtn-${team}" data-action="save" data-team="${team}">Sprint mentése</button>
-    <button class="btn-sm" data-action="clear" data-team="${team}">Törlés</button>
+  <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+    <button class="btn" id="saveBtn-${team}" data-action="save" data-team="${team}">${editingSprint&&editingSprint.team===team?'✏️ Módosítás mentése':'Sprint mentése'}</button>
+    ${editingSprint&&editingSprint.team===team
+      ? `<button class="btn-sm" data-action="cancel-edit" data-team="${team}" style="color:#dc2626;border-color:#fca5a5">Mégsem</button>`
+      : `<button class="btn-sm" data-action="clear" data-team="${team}">Törlés</button>`}
+    ${editingSprint&&editingSprint.team===team?`<span style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:5px;padding:2px 8px">Szerkesztés módban</span>`:''}
   </div>`;
 }
 
@@ -979,6 +1007,26 @@ function setupContentEvents() {
     const action=e.target.closest('[data-action]')?.dataset.action;
     const t=e.target.closest('[data-team]')?.dataset.team;
     if(!action||!t) return;
+    if(action==='edit-sprint'){
+      const idx=parseInt(e.target.closest('[data-editidx]')?.dataset.editidx);
+      const qtr=quartersData[activeQuarterKey];
+      const arr=t==='holdko'?qtr.hk:qtr.zf;
+      const entry=arr[idx];
+      if(!entry) return;
+      const restored=Object.fromEntries(Object.keys(emptyForm).map(k=>[k,entry[k]!==undefined?String(entry[k]):emptyForm[k]]));
+      forms[t]=restored;
+      editingSprint={team:t,idx};
+      render();
+      setTimeout(()=>document.getElementById(`saveBtn-${t}`)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+      return;
+    }
+    if(action==='cancel-edit'){
+      editingSprint=null;
+      forms[t]={...emptyForm};
+      lastResults[t]=null;
+      render();
+      return;
+    }
     if(action==='save'){
       const f=forms[t];
       if(!f.sprintNev){alert('Add meg a sprint nev\u00e9t!');return;}
@@ -991,8 +1039,15 @@ function setupContentEvents() {
       lastResults[t]=result;
       const entry={...f,...result,savedAt:new Date().toISOString()};
       const qtr=quartersData[activeQuarterKey];
-      if(t==='holdko') qtr.hk=[...qtr.hk,entry];
-      else qtr.zf=[...qtr.zf,entry];
+      if(editingSprint&&editingSprint.team===t){
+        const arr=t==='holdko'?[...qtr.hk]:[...qtr.zf];
+        arr[editingSprint.idx]=entry;
+        if(t==='holdko') qtr.hk=arr; else qtr.zf=arr;
+        editingSprint=null;
+      } else {
+        if(t==='holdko') qtr.hk=[...qtr.hk,entry];
+        else qtr.zf=[...qtr.zf,entry];
+      }
       forms[t]={...emptyForm};
       render();
       await saveToGitHub();
