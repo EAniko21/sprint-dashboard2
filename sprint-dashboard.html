@@ -65,6 +65,22 @@ h1 { font-size: 18px; font-weight: 600; margin: 0; }
 .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e5e0; border-top-color: #1a1a18; border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ─── Achievement animations ─────────────────────────────────────────────── */
+@keyframes achIn   { from{opacity:0;transform:translateY(40px) scale(.85)} to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes achOut  { from{opacity:1;transform:translateY(0) scale(1)}       to{opacity:0;transform:translateY(-30px) scale(.9)} }
+@keyframes starPop { 0%{transform:scale(0) rotate(0deg)} 60%{transform:scale(1.3) rotate(20deg)} 100%{transform:scale(1) rotate(0deg)} }
+@keyframes confFall{ 0%{transform:translateY(-10px) rotate(0deg);opacity:1} 100%{transform:translateY(220px) rotate(720deg);opacity:0} }
+@keyframes shimmer { 0%,100%{opacity:.6} 50%{opacity:1} }
+.ach-toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%); z-index:10000; min-width:320px; max-width:480px; background:#fff; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.18); padding:20px 24px 16px; animation:achIn .4s cubic-bezier(.34,1.56,.64,1) forwards; }
+.ach-toast.out { animation:achOut .35s ease-in forwards; }
+.ach-star { display:inline-block; animation:starPop .5s cubic-bezier(.34,1.56,.64,1) both; }
+.ach-conf { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; border-radius:16px; }
+.ach-conf span { position:absolute; top:-12px; font-size:14px; animation:confFall linear forwards; }
+.ach-badge { display:inline-block; background:#fef3c7; color:#92400e; border-radius:8px; padding:2px 10px; font-size:12px; font-weight:600; margin:2px 3px; }
+.ach-badge.green { background:#d1fae5; color:#065f46; }
+.ach-badge.blue  { background:#dbeafe; color:#1e40af; }
+.ach-badge.purple{ background:#ede9fe; color:#5b21b6; }
+
 /* Quarter selector */
 .qtr-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; background: #fff; border: 1px solid #e5e5e0; border-radius: 10px; padding: 10px 14px; }
 .qtr-label { font-size: 11px; color: #888; font-weight: 500; white-space: nowrap; }
@@ -339,6 +355,83 @@ function setSyncState(state, msg) {
   if (!dot || !status) return;
   dot.className = 'sync-dot ' + (state==='ok'?'sync-ok':state==='error'?'sync-err':'sync-loading');
   status.textContent = msg;
+}
+
+// ─── Achievement rendszer ────────────────────────────────────────────────────
+function checkAchievements(team, entry, history, result) {
+  const cfg = TEAM_CONFIG[team];
+  const prev = history.length >= 2 ? calcScore(history[history.length - 2]) : null;
+  const achievements = [];
+
+  // Zöld sprint
+  if (result.rag === 'green') {
+    const streak = (() => { let s=0; for(let i=history.length-1;i>=0;i--){ if(calcScore(history[i]).rag==='green') s++; else break; } return s; })();
+    if (streak >= 3) achievements.push({ icon:'🔥', label:'Szériában!', msg:`${streak} egymás utáni zöld sprint`, type:'purple' });
+    else achievements.push({ icon:'🌟', label:'Zöld sprint!', msg:`${result.total} pont – kiváló teljesítmény`, type:'green' });
+  }
+
+  // Javulás előző sprinthez képest
+  if (prev && result.total > prev.total) {
+    const diff = result.total - prev.total;
+    achievements.push({ icon:'📈', label:`+${diff} pont`, msg:'Fejlődés az előző sprinthez képest', type:'blue' });
+  }
+
+  // Sprint szintű pénzes teljesítve, de göngyölt még nem
+  const pAny = parseFloat(entry.penzesAny)||0;
+  const pGony = parseFloat(entry.penzesGongyolt);
+  if (pAny >= PENZES_CEL && !isNaN(pGony) && pGony < PENZES_CEL) {
+    achievements.push({ icon:'💰', label:'Sprint pénzes ✓', msg:`${pAny}% – még ${(PENZES_CEL - pGony).toFixed(1)}% hiányzik göngyöltre`, type:'' });
+  }
+
+  // Göngyölt pénzes először éri el a célt
+  const prevGonyP = history.length >= 2 ? parseFloat(history[history.length-2].penzesGongyolt)||0 : 0;
+  if (!isNaN(pGony) && pGony >= PENZES_CEL && prevGonyP < PENZES_CEL) {
+    achievements.push({ icon:'🎯', label:'Göngyölt pénzes cél elérve!', msg:`${pGony}% – tartja a ${PENZES_CEL}%+ szintet`, type:'green' });
+  }
+
+  // Göngyölt termelés először éri el a célt
+  const tGony = parseFloat(entry.termelesTamGongyolt);
+  const prevGonyT = history.length >= 2 ? parseFloat(history[history.length-2].termelesTamGongyolt)||0 : 0;
+  if (!isNaN(tGony) && tGony >= TERMELES_CEL && prevGonyT < TERMELES_CEL) {
+    achievements.push({ icon:'⚙️', label:'Göngyölt termelés cél elérve!', msg:`${tGony}% – tartja a ${TERMELES_CEL}%+ szintet`, type:'green' });
+  }
+
+  // Nincs KO és nincs hibapont (tökéletes sprint)
+  const noKo = !Object.values(result.ko).some(v=>v);
+  if (noKo && result.hibapontok === 0 && result.rag !== 'red') {
+    achievements.push({ icon:'✨', label:'Hibapont nélkül!', msg:'Minden pillér teljesítve, nincs KO és hibapont', type:'green' });
+  }
+
+  if (!achievements.length) return;
+  showAchievementToast(cfg.label, achievements, result.rag === 'green');
+}
+
+function showAchievementToast(teamLabel, achievements, withConfetti) {
+  document.getElementById('achToast')?.remove();
+  const confPieces = withConfetti
+    ? ['🌟','⭐','✨','🎉','💫','🏆','🎊'].map((e,i)=>`<span style="left:${10+i*12}%;animation-duration:${1.2+i*.15}s;animation-delay:${i*.08}s">${e}</span>`).join('')
+    : '';
+  const badgeHtml = achievements.map(a=>
+    `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+       <span class="ach-star" style="font-size:22px;animation-delay:${Math.random()*.3}s">${a.icon}</span>
+       <div>
+         <span class="ach-badge ${a.type}">${a.label}</span>
+         <div style="font-size:12px;color:#555;margin-top:2px">${a.msg}</div>
+       </div>
+     </div>`
+  ).join('');
+  const toast = document.createElement('div');
+  toast.id = 'achToast';
+  toast.className = 'ach-toast';
+  toast.innerHTML = `
+    <div class="ach-conf">${confPieces}</div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px;color:#1a1a18">🎖 ${teamLabel} – sprint rögzítve</div>
+    ${badgeHtml}
+    <div style="text-align:right;margin-top:8px">
+      <button onclick="document.getElementById('achToast')?.remove()" style="font-size:12px;padding:4px 14px;border-radius:7px;border:1px solid #d0d0cb;background:#fff;cursor:pointer">Bezár</button>
+    </div>`;
+  document.body.appendChild(toast);
+  setTimeout(() => { const t=document.getElementById('achToast'); if(t){t.classList.add('out');setTimeout(()=>t.remove(),400);} }, 7000);
 }
 
 // ─── Score számítás ───────────────────────────────────────────────────────────
@@ -1041,14 +1134,16 @@ function setupContentEvents() {
       lastResults[t]=result;
       const entry={...f,...result,savedAt:new Date().toISOString()};
       const qtr=quartersData[activeQuarterKey];
+      const historyBefore = t==='holdko'?[...qtr.hk]:[...qtr.zf];
       if(editingSprint&&editingSprint.team===t){
-        const arr=t==='holdko'?[...qtr.hk]:[...qtr.zf];
+        const arr=[...historyBefore];
         arr[editingSprint.idx]=entry;
         if(t==='holdko') qtr.hk=arr; else qtr.zf=arr;
         editingSprint=null;
       } else {
         if(t==='holdko') qtr.hk=[...qtr.hk,entry];
         else qtr.zf=[...qtr.zf,entry];
+        checkAchievements(t, entry, historyBefore, result);
       }
       forms[t]={...emptyForm};
       render();
