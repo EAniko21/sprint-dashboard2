@@ -266,6 +266,58 @@
           "kikerultRatio": 0,
           "elNemRatio": 0,
           "savedAt": "2026-07-27T22:50:48.677Z"
+        },
+        {
+          "sprintNev": "2026/14",
+          "penzesTerv": "32.82",
+          "penzesAny": "34.67",
+          "penzesGongyolt": "28.8",
+          "termelesTamTerv": "58.27",
+          "termelesTamAny": "57.33",
+          "termelesTamGongyolt": "58.06",
+          "kesedelmasElszamolasDb": "2",
+          "szamlaKesedelemDb": "1",
+          "bevDb80": "1",
+          "bevDb60": "0",
+          "suppDb80": "2",
+          "kiemeltElNemKeszult": "nem",
+          "tervezettOsszesen": "369",
+          "kikerultOra": "14",
+          "elNemKeszultOra": "26",
+          "lejaFeldolg": "0",
+          "lejaFelug": "17",
+          "lejaMegoldasi": "nem",
+          "lejaMegkezdett": "36",
+          "lejaBetery": "9",
+          "projKeres": "0",
+          "problemaSurgeto": "nem",
+          "naptarKocka": "97",
+          "uvLelkes": "nem",
+          "uvSzabaly": "nem",
+          "uvKivel": "",
+          "uvMegjegyzes": "",
+          "uvKorrekcioPct": 0,
+          "scores": {
+            "penzes": 0,
+            "termeles": 0,
+            "elszamolas": 0,
+            "munkaminoseg": 0,
+            "tervezes": 100,
+            "feladatrendezettsg": 50
+          },
+          "total": 18,
+          "rawTotal": 18,
+          "rag": "red",
+          "hibapontok": 2,
+          "ko": {
+            "elszamolas": true,
+            "munkaminoseg": false,
+            "tervezes": false,
+            "feladatrendezettsg": false
+          },
+          "kikerultRatio": 0.037940379403794036,
+          "elNemRatio": 0.07046070460704607,
+          "savedAt": "2026-07-27T23:30:04.642Z"
         }
       ]
     }
