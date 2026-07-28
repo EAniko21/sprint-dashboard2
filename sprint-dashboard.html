@@ -438,17 +438,15 @@ function showAchievementToast(teamLabel, achievements, withConfetti) {
 function calcScore(d) {
   let scores = {}, ko = {};
 
-  // 1. Pénzes arány (30%) – bináris: göngyölt (vagy tény) ≥ 30% → 100, egyébként 0
-  const pGongyolt = parseFloat(d.penzesGongyolt);
-  const pAnyRaw   = parseFloat(d.penzesAny);
-  const pVal      = !isNaN(pGongyolt) ? pGongyolt : (!isNaN(pAnyRaw) ? pAnyRaw : NaN);
-  scores.penzes   = (!isNaN(pVal) && pVal >= PENZES_CEL) ? 100 : 0;
+  // 1. Pénzes arány (30%) – KO ha sprint tény < 30%; göngyölt csak vizuális figyelmeztetés
+  const pAnyRaw = parseFloat(d.penzesAny);
+  ko.penzes     = !isNaN(pAnyRaw) && pAnyRaw < PENZES_CEL;
+  scores.penzes = ko.penzes ? 0 : (!isNaN(pAnyRaw) ? 100 : 0);
 
-  // 2. Termelés/támogatás (20%) – bináris: göngyölt (vagy tény) ≥ 60% → 100, egyébként 0
-  const tGongyolt = parseFloat(d.termelesTamGongyolt);
-  const tAnyRaw   = parseFloat(d.termelesTamAny);
-  const tVal      = !isNaN(tGongyolt) ? tGongyolt : (!isNaN(tAnyRaw) ? tAnyRaw : NaN);
-  scores.termeles = (!isNaN(tVal) && tVal >= TERMELES_CEL) ? 100 : 0;
+  // 2. Termelés/támogatás (20%) – KO ha sprint tény < 60%; göngyölt csak vizuális figyelmeztetés
+  const tAnyRaw  = parseFloat(d.termelesTamAny);
+  ko.termeles    = !isNaN(tAnyRaw) && tAnyRaw < TERMELES_CEL;
+  scores.termeles = ko.termeles ? 0 : (!isNaN(tAnyRaw) ? 100 : 0);
 
   // 3. Elszámolási fegyelem (10%)
   const kesDb    = parseInt(d.kesedelmasElszamolasDb)||0;
@@ -527,19 +525,15 @@ function calcScore(d) {
 function livePillarStatus(f) {
   const s = {};
 
-  // Pénzes – bináris: göngyölt (vagy tény) ≥ 30% → zöld, egyébként piros
-  const pGongyoltLive = parseFloat(f.penzesGongyolt);
-  const pAnyLive      = parseFloat(f.penzesAny);
-  const pLiveVal      = !isNaN(pGongyoltLive) ? pGongyoltLive : pAnyLive;
-  if (isNaN(pLiveVal) && (f.penzesGongyolt===''||f.penzesGongyolt===undefined) && (f.penzesAny===''||f.penzesAny===undefined)) { s.penzes = 'neutral'; }
-  else { s.penzes = (!isNaN(pLiveVal) && pLiveVal >= PENZES_CEL) ? 'green' : 'red'; }
+  // Pénzes – sprint tény alapján: < 30% → piros (KO), ≥ 30% → zöld; göngyölt csak info
+  const pAnyLive = parseFloat(f.penzesAny);
+  if (f.penzesAny===''||f.penzesAny===undefined||isNaN(pAnyLive)) { s.penzes = 'neutral'; }
+  else { s.penzes = pAnyLive >= PENZES_CEL ? 'green' : 'red'; }
 
-  // Termelés – bináris: göngyölt (vagy tény) ≥ 60% → zöld, egyébként piros
-  const tGongyoltLive = parseFloat(f.termelesTamGongyolt);
-  const tAnyLive      = parseFloat(f.termelesTamAny);
-  const tLiveVal      = !isNaN(tGongyoltLive) ? tGongyoltLive : tAnyLive;
-  if (isNaN(tLiveVal) && (f.termelesTamGongyolt===''||f.termelesTamGongyolt===undefined) && (f.termelesTamAny===''||f.termelesTamAny===undefined)) { s.termeles = 'neutral'; }
-  else { s.termeles = (!isNaN(tLiveVal) && tLiveVal >= TERMELES_CEL) ? 'green' : 'red'; }
+  // Termelés – sprint tény alapján: < 60% → piros (KO), ≥ 60% → zöld; göngyölt csak info
+  const tAnyLive = parseFloat(f.termelesTamAny);
+  if (f.termelesTamAny===''||f.termelesTamAny===undefined||isNaN(tAnyLive)) { s.termeles = 'neutral'; }
+  else { s.termeles = tAnyLive >= TERMELES_CEL ? 'green' : 'red'; }
 
   // Elszámolás
   const kesDb = parseInt(f.kesedelmasElszamolasDb)||0, szDb = parseInt(f.szamlaKesedelemDb)||0;
@@ -828,7 +822,7 @@ function renderTeamTab(team) {
               <td style="color:#888;font-size:11px">${live.rawTotal??live.total}</td>
               <td>${uv>0?`<span class="bonus-badge">+${uv}%</span>`:''}</td>
               <td>${ragHtml(live.rag)}</td>
-              ${[sc.penzes,sc.termeles].map(v=>`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
+              ${[[sc.penzes,ko.penzes],[sc.termeles,ko.termeles]].map(([v,isKo])=>isKo?`<td><span class="ko-badge">KO</span></td>`:`<td style="color:${scoreColor(v)}">${v??'–'}</td>`).join('')}
               ${[
                 [sc.elszamolas,ko.elszamolas],
                 [sc.munkaminoseg,ko.munkaminoseg],
