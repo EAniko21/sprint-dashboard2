@@ -223,7 +223,7 @@
           "termelesTamTerv": "64.08",
           "termelesTamAny": "61.72",
           "termelesTamGongyolt": "58.39",
-          "kesedelmasElszamolasDb": "0",
+          "kesedelmasElszamolasDb": "1",
           "szamlaKesedelemDb": "1",
           "bevDb80": "0",
           "bevDb60": "0",
@@ -248,13 +248,13 @@
           "scores": {
             "penzes": 0,
             "termeles": 0,
-            "elszamolas": 50,
+            "elszamolas": 0,
             "munkaminoseg": 50,
             "tervezes": 0,
             "feladatrendezettsg": 50
           },
-          "total": 20,
-          "rawTotal": 20,
+          "total": 15,
+          "rawTotal": 15,
           "rag": "red",
           "hibapontok": 2,
           "ko": {
@@ -265,7 +265,7 @@
           },
           "kikerultRatio": 0,
           "elNemRatio": 0,
-          "savedAt": "2026-07-27T22:50:48.677Z"
+          "savedAt": "2026-07-28T00:06:23.838Z"
         },
         {
           "sprintNev": "2026/14",
