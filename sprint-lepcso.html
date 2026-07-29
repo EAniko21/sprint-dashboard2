@@ -123,24 +123,28 @@ function stepsBackgroundSVG(color) {
 }
 
 function renderChart(canvasId, history, cfg) {
-  const labels = history.map((h,i) => h.sprintNev || `S${i+1}`);
+  const n = history.length;
   const actuals = history.map(h => calcScore(h).total);
   const cumActual = actuals.map((v,i) => actuals.slice(0,i+1).reduce((a,b)=>a+b,0));
+  const avgPerSprint = n > 0 ? cumActual[n-1] / n : 0;
 
-  // Flat target line at TARGET_POINTS
+  // Labels: actual sprint names + placeholders for remaining
+  const labels = Array.from({length: TOTAL_SPRINTS}, (_,i) =>
+    i < n ? (history[i].sprintNev || `S${i+1}`) : `+${i-n+1}`
+  );
+
+  // Cumulative actual padded with null for future slots
+  const cumPadded = Array.from({length: TOTAL_SPRINTS}, (_,i) =>
+    i < n ? cumActual[i] : null
+  );
+
+  // Flat target line at 595
   const cumTarget = Array(TOTAL_SPRINTS).fill(TARGET_POINTS);
 
-  // Linear trend extrapolated through remaining sprints
-  const n = cumActual.length;
-  const trendSlope = n > 1 ? (cumActual[n-1] - cumActual[0]) / (n-1) : cumActual[0];
-  const trendData = labels.map((_,i) => {
-    if (i < n) return null;
-    return Math.round(cumActual[n-1] + trendSlope*(i-n+1));
-  });
-  // Fill trend from last actual point
-  const trendFull = labels.map((_,i) => {
+  // Trend from last actual point extrapolated to sprint 7
+  const trendFull = Array.from({length: TOTAL_SPRINTS}, (_,i) => {
     if (i < n-1) return null;
-    return Math.round(cumActual[n-1] + trendSlope*(i-n+1));
+    return Math.min(MAX_POINTS, Math.round(cumActual[n-1] + avgPerSprint * (i - n + 1)));
   });
 
   const ctx = document.getElementById(canvasId);
@@ -153,7 +157,7 @@ function renderChart(canvasId, history, cfg) {
       datasets: [
         {
           label: 'Elért pont (göngyölt)',
-          data: cumActual,
+          data: cumPadded,
           backgroundColor: cfg.color + 'cc',
           borderColor: cfg.color,
           borderWidth: 2,
@@ -221,17 +225,22 @@ function renderChart(canvasId, history, cfg) {
       id: 'barLabels',
       afterDatasetsDraw(chart) {
         const { ctx, data } = chart;
-        const ds = chart.getDatasetMeta(0);
-        ds.data.forEach((bar, i) => {
+        // Bar labels
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
           const v = data.datasets[0].data[i];
           if (v == null) return;
-          ctx.save();
-          ctx.fillStyle = '#444';
-          ctx.font = 'bold 11px system-ui';
-          ctx.textAlign = 'center';
-          ctx.fillText(v, bar.x, bar.y - 6);
-          ctx.restore();
+          ctx.save(); ctx.fillStyle = '#444'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+          ctx.fillText(v, bar.x, bar.y - 6); ctx.restore();
         });
+        // Trend endpoint label
+        const trendMeta = chart.getDatasetMeta(2);
+        const lastIdx = TOTAL_SPRINTS - 1;
+        const lastPt = trendMeta.data[lastIdx];
+        const tv = data.datasets[2].data[lastIdx];
+        if (lastPt && tv != null) {
+          ctx.save(); ctx.fillStyle = cfg.color; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'left';
+          ctx.fillText('\u2192 ' + tv, lastPt.x + 4, lastPt.y + 4); ctx.restore();
+        }
       }
     }]
   });
