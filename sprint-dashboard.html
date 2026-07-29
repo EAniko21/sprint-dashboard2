@@ -1002,8 +1002,8 @@ function initChart() {
   compareChartInstance = new Chart(ctx, {
     type:'line',
     data:{labels,datasets:[
-      {label:'Holdkő',data:hkH.map(h=>h.total),borderColor:'#7F77DD',pointBackgroundColor:'#7F77DD',pointRadius:5,tension:0.3,fill:false},
-      {label:'Zafír', data:zfH.map(h=>h.total),borderColor:'#EF9F27',pointBackgroundColor:'#EF9F27',pointRadius:5,tension:0.3,fill:false},
+      {label:'Holdkő',data:hkH.map(h=>calcScore(h).total),borderColor:'#7F77DD',pointBackgroundColor:'#7F77DD',pointRadius:5,tension:0.3,fill:false},
+      {label:'Zafír', data:zfH.map(h=>calcScore(h).total),borderColor:'#EF9F27',pointBackgroundColor:'#EF9F27',pointRadius:5,tension:0.3,fill:false},
       {label:'Elvárás',data:Array(Math.max(labels.length,2)).fill(85),borderColor:'#dc2626',borderDash:[4,3],pointRadius:0,fill:false,borderWidth:1.5},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
