@@ -322,11 +322,11 @@
         {
           "sprintNev": "2026/15",
           "penzesTerv": "36.04",
-          "penzesAny": "35.05",
-          "penzesGongyolt": "30.19",
+          "penzesAny": "35.48",
+          "penzesGongyolt": "30.27",
           "termelesTamTerv": "71.54",
-          "termelesTamAny": "64.57",
-          "termelesTamGongyolt": "59.51",
+          "termelesTamAny": "65.37",
+          "termelesTamGongyolt": "59.67",
           "kesedelmasElszamolasDb": "2",
           "szamlaKesedelemDb": "1",
           "bevDb80": "0",
@@ -371,7 +371,7 @@
           },
           "kikerultRatio": 0.08256880733944955,
           "elNemRatio": 0.024464831804281346,
-          "savedAt": "2026-07-28T11:28:32.094Z"
+          "savedAt": "2026-07-29T07:15:55.579Z"
         }
       ]
     }
