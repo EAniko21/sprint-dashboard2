@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint lépcső – Zafír & Holdkő</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f0f0ec; min-height: 100vh; padding: 24px; }
+.page { max-width: 900px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 28px; }
+.header h1 { font-size: 22px; font-weight: 700; color: #1a1a18; }
+.header .sub { font-size: 13px; color: #888; margin-top: 4px; }
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 640px) { .panels { grid-template-columns: 1fr; } }
+.panel { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 16px rgba(0,0,0,.07); position: relative; overflow: hidden; }
+.panel-bg { position: absolute; inset: 0; pointer-events: none; opacity: .04; }
+.team-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.team-score { font-size: 13px; color: #888; margin-bottom: 16px; }
+.chart-area { position: relative; height: 280px; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: #888; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend-line { width: 18px; height: 2px; display: inline-block; }
+.progress-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.progress-wrap { flex: 1; background: #eee; border-radius: 6px; height: 8px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 6px; transition: width .6s; }
+.progress-label { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.trophy { font-size: 28px; position: absolute; top: 16px; right: 18px; }
+.status-chip { display: inline-block; border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+.status-green  { background: #d1fae5; color: #065f46; }
+.status-amber  { background: #fef3c7; color: #92400e; }
+.status-red    { background: #fee2e2; color: #991b1b; }
+.loading { text-align: center; padding: 60px; color: #888; font-size: 14px; }
+.error-box { background: #fee2e2; color: #991b1b; border-radius: 10px; padding: 16px; text-align: center; }
+.footer { text-align: center; font-size: 11px; color: #bbb; margin-top: 20px; }
+.steps-bg { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <h1>🏆 Sprint előrehaladás</h1>
+    <div class="sub" id="headerSub">Betöltés...</div>
+  </div>
+  <div id="root"><div class="loading">⏳ Adatok betöltése...</div></div>
+  <div class="footer" id="footerTs"></div>
+</div>
+
+<script>
+const GH_OWNER = 'eaniko21';
+const GH_REPO  = 'sprint-dashboard2';
+const GH_FILE  = 'dashboard-data.json';
+const GH_RAW   = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}`;
+
+const TOTAL_SPRINTS  = 7;
+const TARGET_POINTS  = 595;
+const MAX_POINTS     = 700;
+const PENZES_CEL     = 30;
+const TERMELES_CEL   = 60;
+const WEIGHTS        = { penzes:30, termeles:20, elszamolas:10, munkaminoseg:15, tervezes:10, feladatrendezettsg:15 };
+const TEAM_CONFIG    = {
+  holdko: { label:'Holdkő',  color:'#3a8f3a', light:'#eaf3de' },
+  zafir:  { label:'Zafír',   color:'#2a78d6', light:'#e6f1fb' }
+};
+
+function calcScore(d) {
+  let scores = {}, ko = {};
+  const pAnyRaw = parseFloat(d.penzesAny);
+  ko.penzes     = !isNaN(pAnyRaw) && pAnyRaw < PENZES_CEL;
+  scores.penzes = ko.penzes ? 0 : (!isNaN(pAnyRaw) ? 100 : 0);
+  const tAnyRaw  = parseFloat(d.termelesTamAny);
+  ko.termeles    = !isNaN(tAnyRaw) && tAnyRaw < TERMELES_CEL;
+  scores.termeles = ko.termeles ? 0 : (!isNaN(tAnyRaw) ? 100 : 0);
+  const kesDb = parseInt(d.kesedelmasElszamolasDb)||0, szamlaDb = parseInt(d.szamlaKesedelemDb)||0;
+  ko.elszamolas = kesDb>=2||szamlaDb>=2;
+  let elszScore=100; if(ko.elszamolas){elszScore=0;}else{if(kesDb===1)elszScore-=50;if(szamlaDb===1)elszScore-=50;}
+  scores.elszamolas=Math.max(0,elszScore);
+  const bev80=parseInt(d.bevDb80)||0,bev60=parseInt(d.bevDb60)||0,supp80=parseInt(d.suppDb80)||0;
+  ko.munkaminoseg=bev60>=1||bev80>=3; let mkScore=100;
+  if(ko.munkaminoseg){mkScore=0;}else if(bev80>=1){mkScore-=50;}
+  if(!ko.munkaminoseg){if(supp80>=3){mkScore=0;ko.munkaminoseg=true;}else if(supp80>=1)mkScore=Math.max(0,mkScore-50);}
+  scores.munkaminoseg=mkScore;
+  const kiemelt=d.kiemeltElNemKeszult==='igen',tervO=parseFloat(d.tervezettOsszesen)||0,kik=parseFloat(d.kikerultOra)||0,elN=parseFloat(d.elNemKeszultOra)||0;
+  ko.tervezes=kiemelt; let tervScore=100;
+  if(ko.tervezes){tervScore=0;}else if(tervO>0){if(kik/tervO>0.10)tervScore-=50;if(elN/tervO>0.10)tervScore-=50;tervScore=Math.max(0,tervScore);}
+  scores.tervezes=tervScore;
+  let hp=parseInt(d.lejaFeldolg)||0;
+  if((parseInt(d.lejaFelug)||0)>25)hp++;
+  if(d.lejaMegoldasi==='igen')hp+=2;
+  if((parseInt(d.lejaMegkezdett)||0)>25)hp++;
+  if((parseInt(d.lejaBetery)||0)>3)hp++;
+  hp+=parseInt(d.projKeres)||0;
+  if(d.problemaSurgeto==='igen')hp+=2;
+  if((parseFloat(d.naptarKocka)||0)<90&&d.naptarKocka!==''&&d.naptarKocka!==undefined)hp++;
+  ko.feladatrendezettsg=hp>=4;
+  scores.feladatrendezettsg=hp===0?100:hp<=3?50:0;
+  const rawTotal=Math.round(
+    scores.penzes*WEIGHTS.penzes/100+scores.termeles*WEIGHTS.termeles/100+
+    scores.elszamolas*WEIGHTS.elszamolas/100+scores.munkaminoseg*WEIGHTS.munkaminoseg/100+
+    scores.tervezes*WEIGHTS.tervezes/100+scores.feladatrendezettsg*WEIGHTS.feladatrendezettsg/100);
+  const uvKorrekcioPct=parseFloat(d.uvKorrekcioPct)||0;
+  const total=Math.min(100,Math.max(0,rawTotal+uvKorrekcioPct));
+  return { scores, ko, total, rawTotal };
+}
+
+function sortedQuarterKeys(quartersData) {
+  const order=['tavasz','nyar','osz','tel'];
+  return Object.keys(quartersData).sort((a,b)=>{
+    const [ay,as]=a.split('-'), [by,bs]=b.split('-');
+    return ay!==by ? parseInt(ay)-parseInt(by) : order.indexOf(as)-order.indexOf(bs);
+  });
+}
+
+function stepsBackgroundSVG(color) {
+  const c = color + '22';
+  return `<svg class="steps-bg" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMaxYMax meet">
+    <polygon points="0,280 0,220 60,220 60,170 130,170 130,120 210,120 210,70 300,70 300,30 400,30 400,280" fill="${c}"/>
+    <polyline points="0,220 60,220 60,170 130,170 130,120 210,120 210,70 300,70 300,30 400,30" fill="none" stroke="${color}" stroke-width="1.5" stroke-opacity=".15"/>
+    <text x="370" y="50" font-size="32" text-anchor="middle" opacity=".18">🏆</text>
+  </svg>`;
+}
+
+function renderChart(canvasId, history, cfg) {
+  const labels = history.map((h,i) => h.sprintNev || `S${i+1}`);
+  const actuals = history.map(h => calcScore(h).total);
+  const cumActual = actuals.map((v,i) => actuals.slice(0,i+1).reduce((a,b)=>a+b,0));
+
+  // Flat target line at TARGET_POINTS
+  const cumTarget = Array(TOTAL_SPRINTS).fill(TARGET_POINTS);
+
+  // Linear trend extrapolated through remaining sprints
+  const n = cumActual.length;
+  const trendSlope = n > 1 ? (cumActual[n-1] - cumActual[0]) / (n-1) : cumActual[0];
+  const trendData = labels.map((_,i) => {
+    if (i < n) return null;
+    return Math.round(cumActual[n-1] + trendSlope*(i-n+1));
+  });
+  // Fill trend from last actual point
+  const trendFull = labels.map((_,i) => {
+    if (i < n-1) return null;
+    return Math.round(cumActual[n-1] + trendSlope*(i-n+1));
+  });
+
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Elért pont (göngyölt)',
+          data: cumActual,
+          backgroundColor: cfg.color + 'cc',
+          borderColor: cfg.color,
+          borderWidth: 2,
+          borderRadius: 6,
+          order: 2
+        },
+        {
+          label: 'Cél pontszám',
+          data: cumTarget,
+          type: 'line',
+          borderColor: '#ef4444',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#ef4444',
+          tension: 0,
+          fill: false,
+          order: 1
+        },
+        {
+          label: 'Trend',
+          data: trendFull,
+          type: 'line',
+          borderColor: cfg.color,
+          borderWidth: 2,
+          borderDash: [6,4],
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+          order: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.raw === null) return null;
+              if (ctx.datasetIndex === 0) return ` Elért: ${ctx.raw} pont`;
+              if (ctx.datasetIndex === 1) return ` Cél: ${ctx.raw} pont`;
+              return ` Trend: ${ctx.raw} pont`;
+            }
+          }
+        },
+        datalabels: { display: false }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: {
+          min: 0,
+          max: MAX_POINTS,
+          grid: { color: '#f0f0ec' },
+          ticks: {
+            font: { size: 11 },
+            callback: v => v === TARGET_POINTS ? `${v} 🎯` : v
+          }
+        }
+      },
+      animation: { duration: 900, easing: 'easeOutQuart' }
+    },
+    plugins: [{
+      id: 'barLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        const ds = chart.getDatasetMeta(0);
+        ds.data.forEach((bar, i) => {
+          const v = data.datasets[0].data[i];
+          if (v == null) return;
+          ctx.save();
+          ctx.fillStyle = '#444';
+          ctx.font = 'bold 11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText(v, bar.x, bar.y - 6);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+function renderPanel(team, history, activeQtrLabel) {
+  const cfg = TEAM_CONFIG[team];
+  const actuals = history.map(h => calcScore(h).total);
+  const cumTotal = actuals.reduce((a,b)=>a+b, 0);
+  const remaining = TOTAL_SPRINTS - history.length;
+  const pct = Math.min(100, Math.round(cumTotal / TARGET_POINTS * 100));
+  const onTrack = history.length > 0 && (cumTotal / history.length) >= (TARGET_POINTS / TOTAL_SPRINTS);
+  const statusLabel = pct >= 100 ? '🏆 Teljesítve!' : onTrack ? 'Ütemben' : 'Lemaradás';
+  const statusCls   = pct >= 100 ? 'status-green' : onTrack ? 'status-green' : 'status-amber';
+
+  return `
+  <div class="panel">
+    <div class="panel-bg">${stepsBackgroundSVG(cfg.color)}</div>
+    <div class="team-name" style="color:${cfg.color}">${cfg.label}</div>
+    <div class="team-score">
+      <strong>${cumTotal}</strong> / ${TARGET_POINTS} pont &nbsp;·&nbsp; ${history.length}/${TOTAL_SPRINTS} sprint
+      <span class="status-chip ${statusCls}">${statusLabel}</span>
+    </div>
+    <div class="chart-area"><canvas id="chart-${team}"></canvas></div>
+    <div class="progress-row">
+      <div class="progress-wrap">
+        <div class="progress-fill" style="width:${pct}%;background:${cfg.color}"></div>
+      </div>
+      <div class="progress-label" style="color:${cfg.color}">${pct}%</div>
+    </div>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:${cfg.color}cc;border:2px solid ${cfg.color}"></span>Elért pont (göngyölt)</span>
+      <span><span class="legend-line" style="background:#ef4444"></span>Cél</span>
+      <span><span class="legend-line" style="background:${cfg.color};opacity:.6;border-top:2px dashed ${cfg.color}"></span>Trend</span>
+      ${remaining > 0 ? `<span style="color:#aaa">${remaining} sprint van hátra</span>` : ''}
+    </div>
+  </div>`;
+}
+
+async function init() {
+  try {
+    const resp = await fetch(GH_RAW + '?t=' + Date.now());
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+
+    const qKeys = sortedQuarterKeys(data.quartersData || {});
+    const activeKey = data.activeQuarterKey || qKeys[qKeys.length - 1] || '';
+    const qtr = data.quartersData?.[activeKey];
+    if (!qtr) throw new Error('Nincs adatok a negyedévhez');
+
+    const QUARTER_LABELS = { tavasz:'tavasz', nyar:'nyár', osz:'ősz', tel:'tél' };
+    const [yr, season] = activeKey.split('-');
+    const qLabel = `${yr} ${QUARTER_LABELS[season] || season}`;
+
+    document.getElementById('headerSub').textContent = `${qLabel} negyedév · Elvárás: ${TARGET_POINTS}/${MAX_POINTS} pont · ${TOTAL_SPRINTS} sprint`;
+    document.getElementById('footerTs').textContent = 'Frissítve: ' + new Date().toLocaleString('hu-HU');
+
+    const hkH = qtr.hk || [], zfH = qtr.zf || [];
+
+    document.getElementById('root').innerHTML = `
+      <div class="panels">
+        ${renderPanel('holdko', hkH, qLabel)}
+        ${renderPanel('zafir',  zfH, qLabel)}
+      </div>`;
+
+    requestAnimationFrame(() => {
+      renderChart('chart-holdko', hkH, TEAM_CONFIG.holdko);
+      renderChart('chart-zafir',  zfH, TEAM_CONFIG.zafir);
+    });
+
+  } catch(e) {
+    document.getElementById('root').innerHTML = `<div class="error-box">❌ Betöltési hiba: ${e.message}</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
