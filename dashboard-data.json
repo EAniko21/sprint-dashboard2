@@ -538,8 +538,8 @@
         {
           "sprintNev": "2026/17",
           "penzesTerv": "34.63",
-          "penzesAny": "29.29",
-          "penzesGongyolt": "29.77",
+          "penzesAny": "30",
+          "penzesGongyolt": "30",
           "termelesTamTerv": "61.13",
           "termelesTamAny": "70.7",
           "termelesTamGongyolt": "63.91",
@@ -566,19 +566,19 @@
           "uvMegjegyzes": "",
           "uvKorrekcioPct": 0,
           "scores": {
-            "penzes": 0,
+            "penzes": 100,
             "termeles": 100,
             "elszamolas": 100,
             "munkaminoseg": 100,
             "tervezes": 100,
             "feladatrendezettsg": 50
           },
-          "total": 63,
-          "rawTotal": 63,
-          "rag": "red",
+          "total": 93,
+          "rawTotal": 93,
+          "rag": "green",
           "hibapontok": 3,
           "ko": {
-            "penzes": true,
+            "penzes": false,
             "termeles": false,
             "elszamolas": false,
             "munkaminoseg": false,
@@ -587,7 +587,7 @@
           },
           "kikerultRatio": 0.04460966542750929,
           "elNemRatio": 0.08550185873605948,
-          "savedAt": "2026-08-25T12:37:34.457Z"
+          "savedAt": "2026-08-26T06:13:02.712Z"
         }
       ]
     }
