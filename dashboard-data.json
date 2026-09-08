@@ -351,8 +351,8 @@
           "uvLelkes": "igen",
           "uvSzabaly": "nem",
           "uvKivel": "Baracsi Ferenc",
-          "uvMegjegyzes": "BKK, Amper, Direktor Baracsi Gábor",
-          "uvKorrekcioPct": 16,
+          "uvMegjegyzes": "Direktor Baracsi Gábor",
+          "uvKorrekcioPct": 10,
           "scores": {
             "penzes": 100,
             "termeles": 100,
@@ -361,7 +361,7 @@
             "tervezes": 100,
             "feladatrendezettsg": 50
           },
-          "total": 100,
+          "total": 95,
           "rawTotal": 85,
           "rag": "green",
           "hibapontok": 1,
@@ -375,7 +375,7 @@
           },
           "kikerultRatio": 0.06293706293706294,
           "elNemRatio": 0.04428904428904429,
-          "savedAt": "2026-09-08T10:12:51.849Z"
+          "savedAt": "2026-09-08T10:13:24.071Z"
         }
       ],
       "zf": [
