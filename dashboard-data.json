@@ -242,9 +242,9 @@
           "naptarKocka": "95",
           "uvLelkes": "igen",
           "uvSzabaly": "nem",
-          "uvKivel": "",
-          "uvMegjegyzes": "",
-          "uvKorrekcioPct": 0,
+          "uvKivel": "Baracsi Ferenc",
+          "uvMegjegyzes": "BKK",
+          "uvKorrekcioPct": 10,
           "scores": {
             "penzes": 100,
             "termeles": 100,
@@ -253,7 +253,7 @@
             "tervezes": 100,
             "feladatrendezettsg": 50
           },
-          "total": 85,
+          "total": 95,
           "rawTotal": 85,
           "rag": "green",
           "hibapontok": 1,
@@ -267,7 +267,7 @@
           },
           "kikerultRatio": 0.07157894736842105,
           "elNemRatio": 0.03368421052631579,
-          "savedAt": "2026-08-11T12:25:04.776Z"
+          "savedAt": "2026-09-08T10:14:07.444Z"
         },
         {
           "sprintNev": "2026/17",
