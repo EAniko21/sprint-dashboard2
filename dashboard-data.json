@@ -294,11 +294,11 @@
           "projKeres": "0",
           "problemaSurgeto": "nem",
           "naptarKocka": "95",
-          "uvLelkes": "nem",
+          "uvLelkes": "igen",
           "uvSzabaly": "nem",
-          "uvKivel": "",
-          "uvMegjegyzes": "",
-          "uvKorrekcioPct": 0,
+          "uvKivel": "Baracsi Ferenc",
+          "uvMegjegyzes": "Amper",
+          "uvKorrekcioPct": 10,
           "scores": {
             "penzes": 100,
             "termeles": 100,
@@ -307,7 +307,7 @@
             "tervezes": 100,
             "feladatrendezettsg": 50
           },
-          "total": 85,
+          "total": 95,
           "rawTotal": 85,
           "rag": "green",
           "hibapontok": 1,
@@ -321,7 +321,7 @@
           },
           "kikerultRatio": 0.03985507246376811,
           "elNemRatio": 0.025362318840579712,
-          "savedAt": "2026-08-26T07:16:25.935Z"
+          "savedAt": "2026-09-08T10:13:42.715Z"
         },
         {
           "sprintNev": "2026/18",
